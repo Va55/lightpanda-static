@@ -1,8 +1,8 @@
 diff --git a/build.zig b/build.zig
-index 33d5409..cb80c3e 100644
+index f827395..824a190 100644
 --- a/build.zig
 +++ b/build.zig
-@@ -433,6 +433,15 @@ fn linkRust(b: *Build, mod: *Build.Module, deps: Deps) void {
+@@ -449,6 +449,15 @@ fn linkRust(b: *Build, mod: *Build.Module, deps: Deps, prebuilt_rust_path: ?[]co
          "--manifest-path", "src/rust/ffi/Cargo.toml",
      });
  
@@ -18,7 +18,7 @@ index 33d5409..cb80c3e 100644
      addDirInputs(b, exec_cargo, "src/rust", "target") catch |err| {
          std.debug.panic("walk src/rust: {t}", .{err});
      };
-@@ -448,7 +457,9 @@ fn linkRust(b: *Build, mod: *Build.Module, deps: Deps) void {
+@@ -464,7 +473,9 @@ fn linkRust(b: *Build, mod: *Build.Module, deps: Deps, prebuilt_rust_path: ?[]co
      const rust_step = b.step("rust", "Build the Rust staticlib (requires cargo)");
      rust_step.dependOn(&exec_cargo.step);
  
@@ -43,7 +43,7 @@ index 9f40cf1..523502a 100644
  
  fn free(ctx: *anyopaque, memory: []u8, alignment: Alignment, _: usize) void {
 diff --git a/src/Watchdog.zig b/src/Watchdog.zig
-index f3bfcaa..58c212b 100644
+index f79492e..6adf732 100644
 --- a/src/Watchdog.zig
 +++ b/src/Watchdog.zig
 @@ -17,6 +17,7 @@
@@ -54,7 +54,7 @@ index f3bfcaa..58c212b 100644
  const lp = @import("lightpanda");
  
  const Env = @import("browser/js/Env.zig");
-@@ -131,7 +132,7 @@ fn scan(self: *Watchdog, now: u64) void {
+@@ -134,7 +135,7 @@ fn scan(self: *Watchdog, now: u64) void {
              continue;
          }
  
@@ -63,7 +63,7 @@ index f3bfcaa..58c212b 100644
          if (last == 0) {
              // disarmed: no page work can be running
              continue;
-@@ -182,14 +183,14 @@ pub const Heartbeat = struct {
+@@ -185,14 +186,14 @@ pub const Heartbeat = struct {
      // (e.g. still in the CDP handshake read), or idle-pumping a session with
      // no pages (MCP/agent between commands, see Session.idleSlice) — so the
      // checker skips it.
@@ -81,7 +81,7 @@ index f3bfcaa..58c212b 100644
      }
  
      // Entering a planned wait (e.g. network poll)
-@@ -226,7 +227,7 @@ test "Watchdog: a stall that never returns to JavaScript is reported once" {
+@@ -229,7 +230,7 @@ test "Watchdog: a stall that never returns to JavaScript is reported once" {
      // The report's request time comes from the real clock, so the stall is
      // placed in the past and scans run at (or just after) the real now.
      const now = lp.datetime.milliTimestamp(.boot);
@@ -90,7 +90,7 @@ index f3bfcaa..58c212b 100644
  
      watchdog.scan(now - 2_000);
      try testing.expectEqual(false, entry.fired);
-@@ -246,7 +247,7 @@ test "Watchdog: a stall that never returns to JavaScript is reported once" {
+@@ -249,7 +250,7 @@ test "Watchdog: a stall that never returns to JavaScript is reported once" {
      watchdog.scan(now + 7_000);
  
      // Activity ends the stall.
@@ -99,7 +99,7 @@ index f3bfcaa..58c212b 100644
      watchdog.scan(now + 8_000);
      try testing.expectEqual(false, entry.fired);
  }
-@@ -265,11 +266,11 @@ test "Watchdog: no native report once the script report has been logged" {
+@@ -268,11 +269,11 @@ test "Watchdog: no native report once the script report has been logged" {
      defer watchdog.unregister(&entry);
  
      const now = lp.datetime.milliTimestamp(.boot);
@@ -162,10 +162,10 @@ index 0000000..61c4c63
 +    }
 +};
 diff --git a/src/browser/EventManagerBase.zig b/src/browser/EventManagerBase.zig
-index 2191e6a..6939ace 100644
+index a5c5d58..195d11b 100644
 --- a/src/browser/EventManagerBase.zig
 +++ b/src/browser/EventManagerBase.zig
-@@ -293,7 +293,7 @@ fn findType(types: []const TypeListeners, event_type: String) ?*const TypeListen
+@@ -311,7 +311,7 @@ fn findType(types: []const TypeListeners, event_type: String) ?*const TypeListen
  pub fn hasListener(list: *const std.DoublyLinkedList, comptime which: enum { any, non_passive }) bool {
      var node = list.first;
      while (node) |n| : (node = n.next) {
@@ -175,7 +175,7 @@ index 2191e6a..6939ace 100644
              continue;
          }
 diff --git a/src/browser/js/Env.zig b/src/browser/js/Env.zig
-index 5a7dd1c..7ff5d69 100644
+index 2b9f00d..0566594 100644
 --- a/src/browser/js/Env.zig
 +++ b/src/browser/js/Env.zig
 @@ -17,6 +17,7 @@
@@ -186,7 +186,7 @@ index 5a7dd1c..7ff5d69 100644
  const lp = @import("lightpanda");
  
  const js = @import("js.zig");
-@@ -114,11 +115,11 @@ terminate_requested: std.atomic.Value(bool) = .init(false),
+@@ -111,11 +112,11 @@ terminate_requested: std.atomic.Value(bool) = .init(false),
  // Boot-clock ms at which the watchdog asked for a stall report; 0 = none.
  // Set by the watchdog thread, consumed on the worker by terminateInterrupt so
  // the stalled script can be identified before it is killed.
@@ -200,7 +200,7 @@ index 5a7dd1c..7ff5d69 100644
  
  // Set by the near-heap-limit callback, consumed on the worker by
  // terminateInterrupt so the script that ran out of heap is identified before
-@@ -158,7 +159,7 @@ pub fn init(app: *App, opts: InitOpts) !Env {
+@@ -157,7 +158,7 @@ pub fn init(app: *App, opts: InitOpts) !Env {
      v8.v8__Isolate__CreateParams__CONSTRUCT(params);
      params.snapshot_blob = @ptrCast(&snapshot.startup_data);
  
@@ -209,7 +209,7 @@ index 5a7dd1c..7ff5d69 100644
      errdefer v8.v8__ArrayBuffer__Allocator__DELETE(params.array_buffer_allocator.?);
  
      params.external_references = snapshot.external_references;
-@@ -694,15 +695,15 @@ pub fn requestTerminate(self: *Env) void {
+@@ -785,15 +786,15 @@ pub fn requestTerminate(self: *Env) void {
  // Called from the watchdog thread. Like requestTerminate, but the worker also
  // logs the running script's frame URL and stack before termination.
  pub fn requestTerminateForStall(self: *Env, stalled_ms: u64) void {
@@ -228,7 +228,7 @@ index 5a7dd1c..7ff5d69 100644
      return if (requested_at == 0) null else requested_at;
  }
  
-@@ -717,7 +718,7 @@ fn terminateInterrupt(_: ?*v8.Isolate, data: ?*anyopaque) callconv(.c) void {
+@@ -808,7 +809,7 @@ fn terminateInterrupt(_: ?*v8.Isolate, data: ?*anyopaque) callconv(.c) void {
  
  // Runs on the worker thread, while the script being stopped is on the stack.
  pub fn logPendingReports(self: *Env) void {
@@ -237,7 +237,7 @@ index 5a7dd1c..7ff5d69 100644
      if (requested_at != 0) {
          self.logStall(requested_at);
      }
-@@ -767,7 +768,7 @@ fn logStall(self: *Env, requested_at: u64) void {
+@@ -858,7 +859,7 @@ fn logStall(self: *Env, requested_at: u64) void {
      var stack_buf: [1536]u8 = undefined;
      const report = self.scriptReport(&stack_buf);
      log.warn(.watchdog, "watchdog stall script", .{
@@ -246,16 +246,16 @@ index 5a7dd1c..7ff5d69 100644
          .url = report.url,
          .page_url = report.page_url,
          // Large when the stall was in native code: the interrupt only lands
-@@ -798,7 +799,7 @@ pub fn cancelTerminate(self: *Env) void {
-     self.terminate_mutex.lockUncancelable(lp.io);
-     defer self.terminate_mutex.unlock(lp.io);
+@@ -887,7 +888,7 @@ fn logHeapLimit(self: *Env) void {
+ /// requestTerminate gate so any still-pending interrupt becomes a no-op.
+ pub fn cancelTerminate(self: *Env) void {
      self.terminate_requested.store(false, .release);
 -    self.stall_report_requested_at.store(0, .release);
 +    self.stall_report_requested_at.store(0);
      self.heap_report_requested.store(false, .release);
      v8.v8__Isolate__CancelTerminateExecution(self.isolate.handle);
  }
-@@ -1033,7 +1034,7 @@ test "Env: watchdog termination logs the stalled script once" {
+@@ -1146,7 +1147,7 @@ test "Env: watchdog termination logs the stalled script once" {
      const driver_fn = js.Function{ .local = local, .handle = @ptrCast(driver.handle) };
      var caught: js.TryCatch.Caught = .{};
      try testing.expectError(error.ExecutionTerminated, driver_fn.tryCall(void, .{local.newCallback(State.stall, &state)}, &caught));
@@ -264,7 +264,7 @@ index 5a7dd1c..7ff5d69 100644
  }
  
  test "Env: heap limit termination logs the running script once" {
-@@ -1113,7 +1114,7 @@ test "Env: canceling a termination drops its pending stall report" {
+@@ -1226,7 +1227,7 @@ test "Env: canceling a termination drops its pending stall report" {
      try testing.expect(env.pendingStallReport() != null);
      env.cancelTerminate();
      try testing.expectEqual(null, env.pendingStallReport());
@@ -274,10 +274,10 @@ index 5a7dd1c..7ff5d69 100644
      var ls: js.Local.Scope = undefined;
      frame.js.localScope(&ls);
 diff --git a/src/browser/js/Inspector.zig b/src/browser/js/Inspector.zig
-index bf3c03d..90b2bc6 100644
+index b0f192e..31f09ff 100644
 --- a/src/browser/js/Inspector.zig
 +++ b/src/browser/js/Inspector.zig
-@@ -366,7 +366,7 @@ pub fn getTaggedOpaque(value: *const v8.Value) ?TaggedOpaque {
+@@ -379,7 +379,7 @@ pub fn getTaggedOpaque(value: *const v8.Value) ?TaggedOpaque {
  
  fn cZigStringToString(s: v8.CZigString) ?[]const u8 {
      if (s.ptr == null) return null;
@@ -310,7 +310,7 @@ index 645a02b..bd25b20 100644
      return .{ .handle = handle };
  }
 diff --git a/src/browser/js/Snapshot.zig b/src/browser/js/Snapshot.zig
-index 0c06d78..9e35cfc 100644
+index 3160957..167955b 100644
 --- a/src/browser/js/Snapshot.zig
 +++ b/src/browser/js/Snapshot.zig
 @@ -142,7 +142,7 @@ pub fn create() !Snapshot {
@@ -351,7 +351,7 @@ index f221893..a74a761 100644
          return null;
      }
 diff --git a/src/browser/webapi/webcodecs/VideoFrame.zig b/src/browser/webapi/webcodecs/VideoFrame.zig
-index c7d9059..67d6841 100644
+index 2040a17..3fbe3d8 100644
 --- a/src/browser/webapi/webcodecs/VideoFrame.zig
 +++ b/src/browser/webapi/webcodecs/VideoFrame.zig
 @@ -386,7 +386,7 @@ fn fromBuffer(data: []const u8, init: BufferInit, page: *Page) !*VideoFrame {
@@ -373,7 +373,7 @@ index c7d9059..67d6841 100644
              const in = resource.data[@intCast(src)..][0..@intCast(computed.source_width_bytes)];
              if (parsed.format == source_format) {
 diff --git a/src/log.zig b/src/log.zig
-index 9ed5eed..3748415 100644
+index 2299160..1f792e6 100644
 --- a/src/log.zig
 +++ b/src/log.zig
 @@ -17,6 +17,7 @@
@@ -383,8 +383,8 @@ index 9ed5eed..3748415 100644
 +const atomic_u64 = @import("atomic_u64.zig");
  const lp = @import("lightpanda");
  
- threadlocal var current_page: ?*PageContext = null;
-@@ -664,13 +665,13 @@ const LogFormatWriter = struct {
+ const truncateUtf8 = @import("string.zig").truncateUtf8;
+@@ -697,13 +698,13 @@ const LogFormatWriter = struct {
      }
  };
  
@@ -401,7 +401,7 @@ index 9ed5eed..3748415 100644
      }
  
      const e = now - first;
-@@ -694,10 +695,10 @@ pub const PageContext = struct {
+@@ -727,10 +728,10 @@ pub const PageContext = struct {
      max_level: Level = .info,
  };
  
@@ -430,10 +430,10 @@ index 5972930..5e978e9 100644
  
  fn matchHeaderKey(cursor: *Cursor) void {
 diff --git a/src/network/http.zig b/src/network/http.zig
-index d6f840f..21dd5b8 100644
+index f6d0a25..f63bc94 100644
 --- a/src/network/http.zig
 +++ b/src/network/http.zig
-@@ -584,8 +584,8 @@ pub const Connection = struct {
+@@ -608,8 +608,8 @@ pub const Connection = struct {
      }
  
      // -1 when the transfer used no connection.
@@ -444,7 +444,7 @@ index d6f840f..21dd5b8 100644
          try libcurl.curl_easy_getinfo(self._easy, .conn_id, &conn_id);
          return conn_id;
      }
-@@ -597,8 +597,8 @@ pub const Connection = struct {
+@@ -621,8 +621,8 @@ pub const Connection = struct {
      }
  
      // Total transfer time (name lookup to completion) in microseconds.
@@ -455,7 +455,7 @@ index d6f840f..21dd5b8 100644
          try libcurl.curl_easy_getinfo(self._easy, .total_time_t, &micros);
          return micros;
      }
-@@ -628,13 +628,13 @@ pub const Connection = struct {
+@@ -652,13 +652,13 @@ pub const Connection = struct {
      }
  
      fn getInfoMicros(self: *const Connection, comptime info: libcurl.CurlInfo) !u64 {
@@ -498,10 +498,10 @@ index 6bc535c..52c8b13 100644
          std.debug.assert(@offsetOf(String, "suffix") == 8);
      }
 diff --git a/src/sys/libcurl.zig b/src/sys/libcurl.zig
-index 29e74e4..cd8f7a2 100644
+index 08c399d..d320a67 100644
 --- a/src/sys/libcurl.zig
 +++ b/src/sys/libcurl.zig
-@@ -29,7 +29,7 @@ pub const CurlCode = c.CURLcode;
+@@ -30,7 +30,7 @@ pub const CurlCode = c.CURLcode;
  pub const CurlSList = c.curl_slist;
  pub const CurlHeader = c.curl_header;
  pub const CurlSocket = c.curl_socket_t;

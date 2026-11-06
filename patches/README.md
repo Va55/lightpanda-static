@@ -5,12 +5,13 @@ released binaries were actually built from.
 
 | Repo | Base commit | Patch |
 |---|---|---|
-| `lightpanda-io/zig-v8-fork` | `b73e4fa2d0afe5036745ae7d332cc5cb7e7adb53` (as pinned by `build.zig.zon`) | `0001-zig-v8-fork-ia32-gn-args.patch` |
-| `lightpanda-io/browser` | `f734e7f6aebc945fb8340284bfddd43244bf49ff` (upstream `main`, 2026-10-18) | `0002-lightpanda-ia32-port.patch` |
+| `lightpanda-io/zig-v8-fork` | `0c73cd1732df59b34f4fe4105edba74c42604f3a` (current pin; also applies to `b73e4fa2`, the pin used for the released `r2` binaries) | `0001-zig-v8-fork-ia32-gn-args.patch` |
+| `lightpanda-io/browser` | `8678e04c4f87` (upstream `main`, 2026-11-06 — rebased) | `0002-lightpanda-ia32-port.patch` |
 
-`browser` was checked out as a shallow clone of `main`, so the second patch applies to
-`f734e7f` and its neighbours, not to the `1.0.1` tag (which is 91 commits behind it — see
-[../VERSIONS.md](../VERSIONS.md)).
+`0002` was rebased onto current `main` (`8678e04`, 2026-11-06) and validated there against
+upstream's own gates — `make test` → **2295 of 2295 passed, 7 skipped**; `zig fmt --check`
+clean. The released `r2` binaries were built from the earlier base `f734e7f` (the `1.0.1`
+line + 91 commits); see [../VERSIONS.md](../VERSIONS.md).
 
 ## Apply
 

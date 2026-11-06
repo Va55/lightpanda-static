@@ -104,8 +104,10 @@ Build inputs for `r2` (also in the release's `BUILDINFO.txt`): image
 A separate check of the same recipe (fresh image + fresh clone + only the published patches)
 reproduced the historical i686 builder output exactly (`84eb5f92…`).
 
-The published patch set was validated against upstream's own gates on `f734e7f`:
-`make test` → **1898/1898 passed, 7 skipped**; `zig fmt --check` clean. That run found one
+The published patch set was validated against upstream's own gates on `f734e7f`
+(`make test` → **1898/1898 passed, 7 skipped**) and again after rebasing onto current `main`
+(`8678e04`, 2026-11-06): **2295/2295 passed, 7 skipped**, `zig fmt --check` clean, using the
+`zig-v8-fork` and prebuilt V8 (`v0.6.2`) revision that `main` pins. That run found one
 test-only bug in the patch (a `.swap(0, .acq_rel)` call site left on the 32-bit atomics shim),
 which is fixed in `patches/0002`; the release binaries are unaffected (`605f2e2a…` reproduced
 byte-identically from the corrected tree).

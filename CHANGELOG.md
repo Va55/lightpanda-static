@@ -146,3 +146,21 @@ With the corrected patch applied to `f734e7f`:
 - `make test` — **1898 of 1898 tests passed, 7 skipped**
 - `zig fmt --check ./*.zig ./*/*.zig` — clean
 - patch applies cleanly to a pristine `f734e7f` and reverse-applies to the built tree
+
+### `patches/0002` rebased onto current upstream main
+
+`main` had moved a long way (`f734e7f` → `8678e04`, ~3 weeks), so the port was rebased. Three
+hunks needed manual porting, all one-liners: upstream restructured the imports in `log.zig`
+(ours re-added after `std`), `Env.zig`'s `stall_report_requested_at.store(0, .release)` →
+`.store(0)`, and `Watchdog.zig`'s same call site (its test moved, so the hunk landed elsewhere).
+
+Validated on the rebased tree against upstream's own gates:
+
+- `make test` → **2295 of 2295 tests passed, 7 skipped** (with the `zig-v8-fork` / prebuilt
+  V8 `v0.6.2` revision that current `main` pins — the pin moved since `r2`)
+- `zig fmt --check ./*.zig ./*/*.zig` → clean
+- `patches/0002` applies cleanly to a pristine `8678e04` clone
+- `patches/0001` still applies cleanly to the currently pinned `zig-v8-fork` (`0c73cd1`)
+
+Still outstanding for an i686 build off current `main`: the V8 ia32 archive has to be rebuilt
+for the new `zig-v8-fork` pin; the published `r2` binaries remain built from `f734e7f`.
