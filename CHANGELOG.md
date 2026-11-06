@@ -43,3 +43,18 @@ exactly (so the bytes published are the bytes tested):
 
 JS execution confirmed on the 32-bit host with `lightpanda run` (V8 ia32 JIT), including
 IEEE-754 double formatting. Pre-SSE2 CPUs remain untested.
+
+### Corrections after publication
+
+- **Build commit pin corrected.** Earlier notes said these binaries came from upstream tag
+  `1.0.1`. The build tree was in fact a shallow clone of `main` at
+  `f734e7f6aebc945fb8340284bfddd43244bf49ff` (2026-10-18) — **91 commits after tag `1.0.1`**.
+  Asset names and bytes are unchanged; only the documentation is corrected.
+- **ISA floor confirmed: SSE2.** `qemu-i386 -cpu pentium3` aborts at V8's own probe with
+  `Check failed: cpu.has_sse2()`. The earlier "CMOV/MMX, i.e. Pentium Pro" claim was wrong:
+  the floor is Pentium 4 / Athlon 64 / Core Duo class.
+- **i386 source delta published** in [`patches/`](patches/): the V8 GN-args patch and the
+  17-file 32-bit port (+113/−47), extracted from the build trees, plus V8/depot_tools
+  `15.5.35.13` recorded in `VERSIONS.md`.
+- **Shim clarified**: one *unconditional* shim serves both architectures — verified from the
+  i686 binary's exported `mmap64`/`open64`/`fopen64`/`stat64`/`readdir64`.

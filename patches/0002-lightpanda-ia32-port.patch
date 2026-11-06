@@ -1,0 +1,507 @@
+diff --git a/build.zig b/build.zig
+index 33d5409..cb80c3e 100644
+--- a/build.zig
++++ b/build.zig
+@@ -433,6 +433,15 @@ fn linkRust(b: *Build, mod: *Build.Module, deps: Deps) void {
+         "--manifest-path", "src/rust/ffi/Cargo.toml",
+     });
+ 
++    // Cross-target the Rust FFI: pass -Dcargo_target=<triple> (e.g. i686-unknown-linux-musl)
++    // when the Zig target arch differs from the host, so cargo builds the right arch
++    // into <target-dir>/<triple>/<profile>/. Empty = build for the host.
++    const cargo_target = b.option([]const u8, "cargo_target", "Rust cargo --target triple (empty = host)") orelse "";
++    if (cargo_target.len != 0) {
++        exec_cargo.addArg("--target");
++        exec_cargo.addArg(cargo_target);
++    }
++
+     addDirInputs(b, exec_cargo, "src/rust", "target") catch |err| {
+         std.debug.panic("walk src/rust: {t}", .{err});
+     };
+@@ -448,7 +457,9 @@ fn linkRust(b: *Build, mod: *Build.Module, deps: Deps) void {
+     const rust_step = b.step("rust", "Build the Rust staticlib (requires cargo)");
+     rust_step.dependOn(&exec_cargo.step);
+ 
+-    const obj = out_dir.path(b, out_subdir).path(b, "liblightpanda_ffi.a");
++    var obj_out = out_dir;
++    if (cargo_target.len != 0) obj_out = out_dir.path(b, cargo_target);
++    const obj = obj_out.path(b, out_subdir).path(b, "liblightpanda_ffi.a");
+     mod.addObjectFile(obj);
+ }
+ 
+diff --git a/src/RecyclingAllocator.zig b/src/RecyclingAllocator.zig
+index 9f40cf1..523502a 100644
+--- a/src/RecyclingAllocator.zig
++++ b/src/RecyclingAllocator.zig
+@@ -97,7 +97,7 @@ fn alloc(ctx: *anyopaque, len: usize, alignment: Alignment, ret_addr: usize) ?[*
+         }
+     }
+ 
+-    return self.child_allocator.rawAlloc(class.size, class.alignment, ret_addr);
++    return self.child_allocator.rawAlloc(@intCast(class.size), class.alignment, ret_addr);
+ }
+ 
+ fn free(ctx: *anyopaque, memory: []u8, alignment: Alignment, _: usize) void {
+diff --git a/src/Watchdog.zig b/src/Watchdog.zig
+index f3bfcaa..f43037d 100644
+--- a/src/Watchdog.zig
++++ b/src/Watchdog.zig
+@@ -17,6 +17,7 @@
+ // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ 
+ const std = @import("std");
++const atomic_u64 = @import("atomic_u64.zig");
+ const lp = @import("lightpanda");
+ 
+ const Env = @import("browser/js/Env.zig");
+@@ -131,7 +132,7 @@ fn scan(self: *Watchdog, now: u64) void {
+             continue;
+         }
+ 
+-        const last = heartbeat.last_activity.load(.acquire);
++        const last = heartbeat.last_activity.load();
+         if (last == 0) {
+             // disarmed: no page work can be running
+             continue;
+@@ -182,14 +183,14 @@ pub const Heartbeat = struct {
+     // (e.g. still in the CDP handshake read), or idle-pumping a session with
+     // no pages (MCP/agent between commands, see Session.idleSlice) — so the
+     // checker skips it.
+-    last_activity: std.atomic.Value(u64) = .init(0),
++    last_activity: atomic_u64.Value = .{},
+ 
+     pub fn touch(self: *Heartbeat) void {
+-        self.last_activity.store(lp.datetime.milliTimestamp(.boot), .release);
++        self.last_activity.store(lp.datetime.milliTimestamp(.boot));
+     }
+ 
+     pub fn disarm(self: *Heartbeat) void {
+-        self.last_activity.store(0, .release);
++        self.last_activity.store(0);
+     }
+ 
+     // Entering a planned wait (e.g. network poll)
+@@ -226,7 +227,7 @@ test "Watchdog: a stall that never returns to JavaScript is reported once" {
+     // The report's request time comes from the real clock, so the stall is
+     // placed in the past and scans run at (or just after) the real now.
+     const now = lp.datetime.milliTimestamp(.boot);
+-    heartbeat.last_activity.store(now - 31_000, .release);
++    heartbeat.last_activity.store(now - 31_000);
+ 
+     watchdog.scan(now - 2_000);
+     try testing.expectEqual(false, entry.fired);
+@@ -246,7 +247,7 @@ test "Watchdog: a stall that never returns to JavaScript is reported once" {
+     watchdog.scan(now + 7_000);
+ 
+     // Activity ends the stall.
+-    heartbeat.last_activity.store(now + 7_000, .release);
++    heartbeat.last_activity.store(now + 7_000);
+     watchdog.scan(now + 8_000);
+     try testing.expectEqual(false, entry.fired);
+ }
+@@ -265,7 +266,7 @@ test "Watchdog: no native report once the script report has been logged" {
+     defer watchdog.unregister(&entry);
+ 
+     const now = lp.datetime.milliTimestamp(.boot);
+-    heartbeat.last_activity.store(now - 31_000, .release);
++    heartbeat.last_activity.store(now - 31_000);
+     watchdog.scan(now);
+ 
+     // Stands in for the interrupt landing: the worker consumed the report.
+diff --git a/src/atomic_u64.zig b/src/atomic_u64.zig
+new file mode 100644
+index 0000000..61c4c63
+--- /dev/null
++++ b/src/atomic_u64.zig
+@@ -0,0 +1,42 @@
++// AtomicU64Slot - a u64-compatible atomic slot that compiles on 32-bit targets
++// (usize == u32), where Zig's std.atomic.Value(u64) does not compile.
++//
++// Implemented internally as std.atomic.Value(u32): stores truncate to 32 bits,
++// loads zero-extend back to u64. The consumers are watchdog/log/stall fields
++// holding monotonic ms timestamps and a page-id sequencer. The 32-bit wrap
++// (~49.7 days, ~4.29e9 ids) is benign: consumers compare recent deltas
++// (unsigned, wrapped subtraction is correct) or only test "is non-zero".
++//
++// Call-site shape matches the std.atomic.Value calls they replace:
++//   load()            = load (non-const, like the original atomic .load)
++//   store(v)          = store
++//   swap(v)           = swap (returns old value)
++//   cmpxchg(old,new)  = cmpxchgStrong (null on success, else current value)
++//   fetchAdd(x)       = fetchAdd (returns old value)
++const std = @import("std");
++
++pub const Value = struct {
++    inner: std.atomic.Value(u32) = .init(0),
++
++    pub fn load(self: *const Value) u64 {
++        return self.inner.load(.monotonic);
++    }
++
++    pub fn store(self: *Value, v: u64) void {
++        self.inner.store(@truncate(v), .monotonic);
++    }
++
++    pub fn swap(self: *Value, v: u64) u64 {
++        return @atomicRmw(u32, &self.inner.raw, .Xchg, @truncate(v), .monotonic);
++    }
++
++    pub fn fetchAdd(self: *Value, x: u64) u64 {
++        return @atomicRmw(u32, &self.inner.raw, .Add, @truncate(x), .monotonic);
++    }
++
++    pub fn cmpxchg(self: *Value, old: u64, new: u64) ?u64 {
++        const res = @cmpxchgStrong(u32, &self.inner.raw, @truncate(old), @truncate(new), .monotonic, .monotonic);
++        if (res) |cur| return cur;
++        return null;
++    }
++};
+diff --git a/src/browser/EventManagerBase.zig b/src/browser/EventManagerBase.zig
+index 2191e6a..6939ace 100644
+--- a/src/browser/EventManagerBase.zig
++++ b/src/browser/EventManagerBase.zig
+@@ -293,7 +293,7 @@ fn findType(types: []const TypeListeners, event_type: String) ?*const TypeListen
+ pub fn hasListener(list: *const std.DoublyLinkedList, comptime which: enum { any, non_passive }) bool {
+     var node = list.first;
+     while (node) |n| : (node = n.next) {
+-        const listener: *align(8) Listener = @fieldParentPtr("node", n);
++        const listener: *Listener = @fieldParentPtr("node", n);
+         if (listener.removed) {
+             continue;
+         }
+diff --git a/src/browser/js/Env.zig b/src/browser/js/Env.zig
+index 5a7dd1c..7ff5d69 100644
+--- a/src/browser/js/Env.zig
++++ b/src/browser/js/Env.zig
+@@ -17,6 +17,7 @@
+ // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ 
+ const std = @import("std");
++const atomic_u64 = @import("../../atomic_u64.zig");
+ const lp = @import("lightpanda");
+ 
+ const js = @import("js.zig");
+@@ -114,11 +115,11 @@ terminate_requested: std.atomic.Value(bool) = .init(false),
+ // Boot-clock ms at which the watchdog asked for a stall report; 0 = none.
+ // Set by the watchdog thread, consumed on the worker by terminateInterrupt so
+ // the stalled script can be identified before it is killed.
+-stall_report_requested_at: std.atomic.Value(u64) = .init(0),
++stall_report_requested_at: atomic_u64.Value = .{},
+ // How long the worker had stalled when the watchdog requested the report.
+ // Published before stall_report_requested_at, so it's visible to whoever
+ // observes that as non-zero.
+-stall_report_stalled_ms: std.atomic.Value(u64) = .init(0),
++stall_report_stalled_ms: atomic_u64.Value = .{},
+ 
+ // Set by the near-heap-limit callback, consumed on the worker by
+ // terminateInterrupt so the script that ran out of heap is identified before
+@@ -158,7 +159,7 @@ pub fn init(app: *App, opts: InitOpts) !Env {
+     v8.v8__Isolate__CreateParams__CONSTRUCT(params);
+     params.snapshot_blob = @ptrCast(&snapshot.startup_data);
+ 
+-    params.array_buffer_allocator = v8.v8__ArrayBuffer__Allocator__NewDefaultAllocator(js.ArrayBuffer.MAX_LENGTH).?;
++    params.array_buffer_allocator = v8.v8__ArrayBuffer__Allocator__NewDefaultAllocator(if (@sizeOf(usize) > 4) js.ArrayBuffer.MAX_LENGTH else std.math.maxInt(usize)).?;
+     errdefer v8.v8__ArrayBuffer__Allocator__DELETE(params.array_buffer_allocator.?);
+ 
+     params.external_references = snapshot.external_references;
+@@ -694,15 +695,15 @@ pub fn requestTerminate(self: *Env) void {
+ // Called from the watchdog thread. Like requestTerminate, but the worker also
+ // logs the running script's frame URL and stack before termination.
+ pub fn requestTerminateForStall(self: *Env, stalled_ms: u64) void {
+-    self.stall_report_stalled_ms.store(stalled_ms, .monotonic);
+-    self.stall_report_requested_at.store(@max(lp.datetime.milliTimestamp(.boot), 1), .release);
++    self.stall_report_stalled_ms.store(stalled_ms);
++    self.stall_report_requested_at.store(@max(lp.datetime.milliTimestamp(.boot), 1));
+     self.requestTerminate();
+ }
+ 
+ // Boot-clock ms at which a stall report was requested but not yet logged by
+ // the worker, or null. Read by the watchdog thread.
+ pub fn pendingStallReport(self: *const Env) ?u64 {
+-    const requested_at = self.stall_report_requested_at.load(.acquire);
++    const requested_at = self.stall_report_requested_at.load();
+     return if (requested_at == 0) null else requested_at;
+ }
+ 
+@@ -717,7 +718,7 @@ fn terminateInterrupt(_: ?*v8.Isolate, data: ?*anyopaque) callconv(.c) void {
+ 
+ // Runs on the worker thread, while the script being stopped is on the stack.
+ pub fn logPendingReports(self: *Env) void {
+-    const requested_at = self.stall_report_requested_at.swap(0, .acq_rel);
++    const requested_at = self.stall_report_requested_at.swap(0);
+     if (requested_at != 0) {
+         self.logStall(requested_at);
+     }
+@@ -767,7 +768,7 @@ fn logStall(self: *Env, requested_at: u64) void {
+     var stack_buf: [1536]u8 = undefined;
+     const report = self.scriptReport(&stack_buf);
+     log.warn(.watchdog, "watchdog stall script", .{
+-        .stalled_ms = self.stall_report_stalled_ms.load(.monotonic),
++        .stalled_ms = self.stall_report_stalled_ms.load(),
+         .url = report.url,
+         .page_url = report.page_url,
+         // Large when the stall was in native code: the interrupt only lands
+@@ -798,7 +799,7 @@ pub fn cancelTerminate(self: *Env) void {
+     self.terminate_mutex.lockUncancelable(lp.io);
+     defer self.terminate_mutex.unlock(lp.io);
+     self.terminate_requested.store(false, .release);
+-    self.stall_report_requested_at.store(0, .release);
++    self.stall_report_requested_at.store(0);
+     self.heap_report_requested.store(false, .release);
+     v8.v8__Isolate__CancelTerminateExecution(self.isolate.handle);
+ }
+@@ -1033,7 +1034,7 @@ test "Env: watchdog termination logs the stalled script once" {
+     const driver_fn = js.Function{ .local = local, .handle = @ptrCast(driver.handle) };
+     var caught: js.TryCatch.Caught = .{};
+     try testing.expectError(error.ExecutionTerminated, driver_fn.tryCall(void, .{local.newCallback(State.stall, &state)}, &caught));
+-    try testing.expectEqual(0, env.stall_report_requested_at.load(.acquire));
++    try testing.expectEqual(0, env.stall_report_requested_at.load());
+ }
+ 
+ test "Env: heap limit termination logs the running script once" {
+@@ -1113,7 +1114,7 @@ test "Env: canceling a termination drops its pending stall report" {
+     try testing.expect(env.pendingStallReport() != null);
+     env.cancelTerminate();
+     try testing.expectEqual(null, env.pendingStallReport());
+-    try testing.expectEqual(0, env.stall_report_requested_at.load(.acquire));
++    try testing.expectEqual(0, env.stall_report_requested_at.load());
+ 
+     var ls: js.Local.Scope = undefined;
+     frame.js.localScope(&ls);
+diff --git a/src/browser/js/Inspector.zig b/src/browser/js/Inspector.zig
+index bf3c03d..90b2bc6 100644
+--- a/src/browser/js/Inspector.zig
++++ b/src/browser/js/Inspector.zig
+@@ -366,7 +366,7 @@ pub fn getTaggedOpaque(value: *const v8.Value) ?TaggedOpaque {
+ 
+ fn cZigStringToString(s: v8.CZigString) ?[]const u8 {
+     if (s.ptr == null) return null;
+-    return s.ptr[0..s.len];
++    return s.ptr[0..@intCast(s.len)];
+ }
+ 
+ // C export functions for Inspector callbacks
+diff --git a/src/browser/js/Integer.zig b/src/browser/js/Integer.zig
+index 645a02b..bd25b20 100644
+--- a/src/browser/js/Integer.zig
++++ b/src/browser/js/Integer.zig
+@@ -25,10 +25,14 @@ const Integer = @This();
+ handle: *const v8.Integer,
+ 
+ pub fn init(isolate: *v8.Isolate, value: anytype) Integer {
+-    const handle = switch (@TypeOf(value)) {
+-        i8, i16, i32 => v8.v8__Integer__New(isolate, value).?,
+-        u8, u16, u32 => v8.v8__Integer__NewFromUnsigned(isolate, value).?,
+-        else => |T| @compileError("cannot create v8::Integer from: " ++ @typeName(T)),
++    const T = @TypeOf(value);
++    const handle = switch (@typeInfo(T)) {
++        .comptime_int => v8.v8__Integer__New(isolate, @intCast(value)).?,
++        .int => |i| if (i.signedness == .signed)
++            v8.v8__Integer__New(isolate, @intCast(value)).?
++        else
++            v8.v8__Integer__NewFromUnsigned(isolate, @intCast(value)).?,
++        else => @compileError("cannot create v8::Integer from: " ++ @typeName(T)),
+     };
+     return .{ .handle = handle };
+ }
+diff --git a/src/browser/js/Snapshot.zig b/src/browser/js/Snapshot.zig
+index 0c06d78..9e35cfc 100644
+--- a/src/browser/js/Snapshot.zig
++++ b/src/browser/js/Snapshot.zig
+@@ -142,7 +142,7 @@ pub fn create() !Snapshot {
+ 
+     var params: v8.CreateParams = undefined;
+     v8.v8__Isolate__CreateParams__CONSTRUCT(&params);
+-    params.array_buffer_allocator = v8.v8__ArrayBuffer__Allocator__NewDefaultAllocator(4 * 1024 * 1024 * 1024);
++    params.array_buffer_allocator = v8.v8__ArrayBuffer__Allocator__NewDefaultAllocator(if (@sizeOf(usize) > 4) 4 * 1024 * 1024 * 1024 else std.math.maxInt(usize));
+     defer v8.v8__ArrayBuffer__Allocator__DELETE(params.array_buffer_allocator.?);
+     params.external_references = external_references;
+ 
+diff --git a/src/browser/js/TaggedOpaque.zig b/src/browser/js/TaggedOpaque.zig
+index f221893..a74a761 100644
+--- a/src/browser/js/TaggedOpaque.zig
++++ b/src/browser/js/TaggedOpaque.zig
+@@ -150,9 +150,12 @@ pub fn fromJS(comptime R: type, js_obj_handle: *const v8.Object) !R {
+ // 48 bits and base is at least 4-byte aligned, which leaves bit 1 free for the
+ // flag. Expanded is the fallback for when either isn't true. Bit 0 stays clear
+ // in both forms: V8 requires internal field pointers to be 2-byte aligned.
+-const compact_flag: usize = 0b10;
+-const address_bits = 48;
+-const address_mask: usize = (1 << address_bits) - 1;
++// 32-bit (usize=u32) cannot hold the 64-bit compact packing, so always use
++// the expanded (heap-pointer) form there; 64-bit keeps the compact encoding.
++const use_compact = @sizeOf(usize) >= 8;
++const compact_flag: usize = if (use_compact) 0b10 else 0;
++const address_bits = if (use_compact) 48 else 0;
++const address_mask: usize = if (use_compact) (@as(usize, 1) << 48) - 1 else 0;
+ 
+ // Store the tag into a JS object's internal field.
+ pub fn store(self: TaggedOpaque, js_obj_handle: *const v8.Object, arena: Allocator) !void {
+@@ -178,6 +181,7 @@ pub fn fromObject(js_obj_handle: *const v8.Object) ?TaggedOpaque {
+ }
+ 
+ fn compact(self: TaggedOpaque) ?usize {
++    if (!use_compact) return null; // 32-bit: always expanded (heap pointer)
+     if (self.base & 0b11 != 0 or self.base & ~address_mask != 0) {
+         return null;
+     }
+diff --git a/src/browser/webapi/webcodecs/VideoFrame.zig b/src/browser/webapi/webcodecs/VideoFrame.zig
+index c7d9059..67d6841 100644
+--- a/src/browser/webapi/webcodecs/VideoFrame.zig
++++ b/src/browser/webapi/webcodecs/VideoFrame.zig
+@@ -386,7 +386,7 @@ fn fromBuffer(data: []const u8, init: BufferInit, page: *Page) !*VideoFrame {
+         const rows = ceilDiv(visible.height, plane.height);
+         var src: u64 = source.offset + (visible.y / plane.height) * source.stride + (visible.x / plane.width) * plane.sample_bytes;
+         var dst = resource.offset(i);
+-        for (0..rows) |_| {
++        for (0..@intCast(rows)) |_| {
+             @memcpy(resource.data[@intCast(dst)..][0..@intCast(row_bytes)], data[@intCast(src)..][0..@intCast(row_bytes)]);
+             src += source.stride;
+             dst += row_bytes;
+@@ -788,7 +788,7 @@ fn copyInto(self: *const VideoFrame, dest: []u8, options: CopyToOptions) !Layout
+         const source_stride = resource.stride(i);
+         var src = resource.offset(i) + computed.source_top * source_stride + computed.source_left_bytes;
+         var dst = computed.offset;
+-        for (0..computed.source_height) |_| {
++        for (0..@intCast(computed.source_height)) |_| {
+             const out = dest[@intCast(dst)..][0..@intCast(computed.source_width_bytes)];
+             const in = resource.data[@intCast(src)..][0..@intCast(computed.source_width_bytes)];
+             if (parsed.format == source_format) {
+diff --git a/src/log.zig b/src/log.zig
+index 9ed5eed..3748415 100644
+--- a/src/log.zig
++++ b/src/log.zig
+@@ -17,6 +17,7 @@
+ // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ 
+ const std = @import("std");
++const atomic_u64 = @import("atomic_u64.zig");
+ const lp = @import("lightpanda");
+ 
+ threadlocal var current_page: ?*PageContext = null;
+@@ -664,13 +665,13 @@ const LogFormatWriter = struct {
+     }
+ };
+ 
+-var first_log: std.atomic.Value(u64) = .init(0);
++var first_log: atomic_u64.Value = .{};
+ fn elapsed() struct { time: f64, unit: []const u8 } {
+     const now = timestamp(.boot);
+ 
+-    var first = first_log.load(.monotonic);
++    var first = first_log.load();
+     if (first == 0) {
+-        first = first_log.cmpxchgStrong(0, now, .monotonic, .monotonic) orelse now;
++        first = first_log.cmpxchg(0, now) orelse now;
+     }
+ 
+     const e = now - first;
+@@ -694,10 +695,10 @@ pub const PageContext = struct {
+     max_level: Level = .info,
+ };
+ 
+-var page_id_gen = std.atomic.Value(u64).init(0);
++var page_id_gen: atomic_u64.Value = .{};
+ 
+ pub fn nextPageId() u64 {
+-    return page_id_gen.fetchAdd(1, .monotonic) + 1;
++    return page_id_gen.fetchAdd(1) + 1;
+ }
+ 
+ pub const PageScope = struct {
+diff --git a/src/network/header_parser.zig b/src/network/header_parser.zig
+index 5972930..5e978e9 100644
+--- a/src/network/header_parser.zig
++++ b/src/network/header_parser.zig
+@@ -49,7 +49,9 @@ fn zeroBytes(v: usize) usize {
+ 
+ /// Returns an integer filled with a given byte.
+ fn broadcast(byte: u8) usize {
+-    return @as(usize, @intCast(byte)) * 0x01_01_01_01_01_01_01_01;
++    var m: usize = 0;
++    for (0..@sizeOf(usize)) |_| m = (m << 8) | byte;
++    return m;
+ }
+ 
+ fn matchHeaderKey(cursor: *Cursor) void {
+diff --git a/src/network/http.zig b/src/network/http.zig
+index d6f840f..21dd5b8 100644
+--- a/src/network/http.zig
++++ b/src/network/http.zig
+@@ -584,8 +584,8 @@ pub const Connection = struct {
+     }
+ 
+     // -1 when the transfer used no connection.
+-    pub fn getConnId(self: *const Connection) !c_long {
+-        var conn_id: c_long = undefined;
++    pub fn getConnId(self: *const Connection) !libcurl.CurlOffT {
++        var conn_id: libcurl.CurlOffT = undefined;
+         try libcurl.curl_easy_getinfo(self._easy, .conn_id, &conn_id);
+         return conn_id;
+     }
+@@ -597,8 +597,8 @@ pub const Connection = struct {
+     }
+ 
+     // Total transfer time (name lookup to completion) in microseconds.
+-    pub fn getTotalTimeMicros(self: *const Connection) !c_long {
+-        var micros: c_long = undefined;
++    pub fn getTotalTimeMicros(self: *const Connection) !libcurl.CurlOffT {
++        var micros: libcurl.CurlOffT = undefined;
+         try libcurl.curl_easy_getinfo(self._easy, .total_time_t, &micros);
+         return micros;
+     }
+@@ -628,13 +628,13 @@ pub const Connection = struct {
+     }
+ 
+     fn getInfoMicros(self: *const Connection, comptime info: libcurl.CurlInfo) !u64 {
+-        var micros: c_long = undefined;
++        var micros: libcurl.CurlOffT = undefined;
+         try libcurl.curl_easy_getinfo(self._easy, info, &micros);
+         return @intCast(@max(0, micros));
+     }
+ 
+     pub fn getDownloadSize(self: *const Connection) !u64 {
+-        var size: c_long = undefined;
++        var size: libcurl.CurlOffT = undefined;
+         try libcurl.curl_easy_getinfo(self._easy, .size_download_t, &size);
+         return @intCast(@max(0, size));
+     }
+diff --git a/src/server/WS.zig b/src/server/WS.zig
+index 58c8da3..d8bafed 100644
+--- a/src/server/WS.zig
++++ b/src/server/WS.zig
+@@ -316,7 +316,7 @@ fn ReaderM(comptime EXPECT_MASK: bool) type {
+ 
+             const payload_len: usize = switch (length_of_len) {
+                 2 => std.mem.readInt(u16, buf[2..4], .big),
+-                8 => std.mem.readInt(u64, buf[2..10], .big),
++                8 => @as(usize, @intCast(std.mem.readInt(u64, buf[2..10], .big))),
+                 else => buf[1] & 127,
+             };
+ 
+diff --git a/src/string.zig b/src/string.zig
+index 6bc535c..52c8b13 100644
+--- a/src/string.zig
++++ b/src/string.zig
+@@ -37,7 +37,7 @@ pub const String = extern struct {
+ 
+     comptime {
+         std.debug.assert(@sizeOf(String) == 16);
+-        std.debug.assert(@alignOf(String) == 8);
++        std.debug.assert(@alignOf(String) == @sizeOf(usize)); // 8 on 64-bit, 4 on i386
+         std.debug.assert(@offsetOf(String, "prefix") == 4);
+         std.debug.assert(@offsetOf(String, "suffix") == 8);
+     }
+diff --git a/src/sys/libcurl.zig b/src/sys/libcurl.zig
+index 29e74e4..cd8f7a2 100644
+--- a/src/sys/libcurl.zig
++++ b/src/sys/libcurl.zig
+@@ -29,7 +29,7 @@ pub const CurlCode = c.CURLcode;
+ pub const CurlSList = c.curl_slist;
+ pub const CurlHeader = c.curl_header;
+ pub const CurlSocket = c.curl_socket_t;
+-const CurlOffT = c.curl_off_t;
++pub const CurlOffT = c.curl_off_t;
+ 
+ pub const CURLE = struct {
+     pub const OK = c.CURLE_OK;

@@ -1,0 +1,18 @@
+diff --git a/build.zig b/build.zig
+index ee4decb..9f5cb72 100644
+--- a/build.zig
++++ b/build.zig
+@@ -82,6 +82,13 @@ const GnArgs = struct {
+                     try args.appendSlice(gpa, "clang_use_chrome_plugins=false\n");
+                     try args.appendSlice(gpa, "treat_warnings_as_errors=false\n");
+                 }
++                // 32-bit x86 (i386/ia32): force target_cpu and disable 64-bit-only ptr-compression+sandbox
++                if (arch == .x86) {
++                    try args.appendSlice(gpa, "target_cpu=\"x86\"\n");
++                    try args.appendSlice(gpa, "v8_enable_pointer_compression=false\n");
++                    try args.appendSlice(gpa, "v8_enable_sandbox=false\n");
++                    try args.appendSlice(gpa, "treat_warnings_as_errors=false\n");
++                }
+             },
+             else => {},
+         }

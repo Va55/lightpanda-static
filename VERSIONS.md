@@ -8,19 +8,25 @@ What the released binaries were actually built from. The recipe is in
 | Field | Value |
 |---|---|
 | Project | [lightpanda-io/browser](https://github.com/lightpanda-io/browser) |
-| Tag | **`1.0.1`** |
-| Commit | **`99edca45844b5968c3ec8e50ad8e1acec8f3b759`** |
-| Upstream release date | 2026-10-15 |
+| Build commit | **`f734e7f6aebc945fb8340284bfddd43244bf49ff`** |
+| Position | upstream `main`, 2026-10-18 — **91 commits after tag `1.0.1`** |
+| Release line | `1.0.1` (tag `1.0.1` = `99edca45844b5968c3ec8e50ad8e1acec8f3b759`, 2026-10-15) |
 | Version string inside the binary | `1.1.0-dev` |
 
-`lightpanda version` prints `1.1.0-dev` because upstream's `build.zig.zon` at tag `1.0.1`
-declares the *next development* version. Tags `1.0.1`, `1.0.2` and `1.0.3` all ship the
-same string, which is why releases here are named after the **tag**, not the string.
-
+The build tree was a shallow clone of `main` (no tags present), so the binaries are a
+**post-1.0.1 main snapshot**, not the `1.0.1` tag itself. The release is named `1.0.1-r1`
+because it is based on the `1.0.1` release line; the exact commit is the one above.
 ```sh
 git clone https://github.com/lightpanda-io/browser
-git checkout 99edca45844b5968c3ec8e50ad8e1acec8f3b759   # tag 1.0.1
+git checkout f734e7f6aebc945fb8340284bfddd43244bf49ff   # what the binaries were built from
 ```
+
+Delta vs the `1.0.1` tag: 91 commits, mostly `webapi`/`session`/`cache`/`tree` work
+(see the [compare view](https://github.com/lightpanda-io/browser/compare/99edca45844b5968c3ec8e50ad8e1acec8f3b759...f734e7f6aebc945fb8340284bfddd43244bf49ff)).
+
+`lightpanda version` prints `1.1.0-dev` because upstream's `build.zig.zon` declares the
+*next development* version. Tags `1.0.1`, `1.0.2` and `1.0.3` all ship that same string,
+which is why releases here are named after the release line, not the string.
 
 ## Dependencies (as pinned in `build.zig.zon` @ tag `1.0.1`)
 
@@ -45,8 +51,10 @@ git checkout 99edca45844b5968c3ec8e50ad8e1acec8f3b759   # tag 1.0.1
 |---|---|
 | Zig | `0.17.0` (`minimum_zig_version` in `build.zig.zon`) |
 | Rust (i686 asset only) | `i686-unknown-linux-musl` target |
+| V8 | `zig-v8-fork` `b73e4fa2d0afe5036745ae7d332cc5cb7e7adb53`, V8 `15.5.35.13`, depot_tools `15.5.35.13` |
 | Build host | Debian trixie container, `docker` |
-| glibc→musl shim | [`build/musl_glibc_shim.c`](build/musl_glibc_shim.c) (this repo) |
+| glibc→musl shim | [`build/musl_glibc_shim.c`](build/musl_glibc_shim.c) — one unconditional shim for both arches |
+| i386 patches | [`patches/`](patches/) — V8 GN args + the 32-bit port (base commit `f734e7f`) |
 
 ## Released assets
 
@@ -60,12 +68,23 @@ git checkout 99edca45844b5968c3ec8e50ad8e1acec8f3b759   # tag 1.0.1
 Both hashes were re-verified on the test hosts themselves (`sha256sum` run against the
 executable that was actually exercised), so the published bytes are the tested bytes.
 
+## CPU requirement: SSE2 (verified)
+
+V8's ia32 build refuses to start without SSE2 — on a Pentium III-class CPU (`qemu-i386
+-cpu pentium3`) it aborts with:
+
+```
+Fatal error
+Check failed: cpu.has_sse2().
+```
+
+So the real floor is **SSE2-class: Pentium 4 / Athlon 64 / Core Duo and newer**, not
+"CMOV/MMX Pentium Pro" as earlier notes claimed. Confirmed working on a Core Duo L2500
+(Yonah); 80386/486/Pentium/Pentium II/III are out.
+
 ## Known provenance gaps
 
-Stated plainly so nobody assumes more reproducibility than exists:
-
-- The `-Dcargo_target` patch to `build.zig`'s `linkRust` (needed for the i686 Rust FFI) is
-  described in `build/README.md` but is **not yet published as a patch file**.
-- The ~40 i386 source fixes are listed as prose in `build/README.md`, not as diffs.
 - No second independent build has been compared byte-for-byte, so the binaries are
   **not yet verified reproducible**.
+- The `browser` tree was a shallow clone of `main`; nothing else about the build was
+  recorded beyond the pins above (`patches/` now carries the full source delta).

@@ -5,19 +5,21 @@ Verified to build and run with zero glibc on both 64-bit and 32-bit musl (Alpine
 
 ## Pinned inputs
 
-The released binaries were built from upstream tag **`1.0.1`**
-(`99edca45844b5968c3ec8e50ad8e1acec8f3b759`). Check it out before building, so the V8 /
-Rust / dependency revisions match:
+The released binaries were built from upstream **`main` at
+`f734e7f6aebc945fb8340284bfddd43244bf49ff`** (2026-10-18) — 91 commits after tag `1.0.1`
+(`99edca45`). The build tree was a shallow clone, so tags were not present locally. Check
+out the commit so the V8 / Rust / dependency revisions match:
 
 ```sh
 git clone https://github.com/lightpanda-io/browser
-git checkout 99edca45844b5968c3ec8e50ad8e1acec8f3b759   # tag 1.0.1
+git checkout f734e7f6aebc945fb8340284bfddd43244bf49ff   # what the binaries were built from
 ```
 
-All dependency pins (zig-v8-fork, curl, sqlite, pcre2, …) are recorded in
-[../VERSIONS.md](../VERSIONS.md). Note that `lightpanda version` prints `1.1.0-dev` for
-tag `1.0.1` — that is upstream's next-development string, not the release; name builds
-`<upstream tag>-r<n>` instead.
+All dependency pins (zig-v8-fork `b73e4fa2`, V8 `15.5.35.13`, curl, sqlite, pcre2, …) are
+recorded in [../VERSIONS.md](../VERSIONS.md), and the i386 source delta is in
+[../patches/](../patches/). Note that `lightpanda version` prints `1.1.0-dev` for the
+`1.0.x` line — that is upstream's next-development string, not the release; name builds
+`<release line>-r<n>` instead.
 
 ## The critical discovery
 
@@ -90,14 +92,17 @@ The i386 build is a full port, not a flag. `-Dtarget=x86-linux-musl` alone silen
 an x86_64 V8 (the target never reaches V8's own compile; zig-v8-fork's GN args never set
 `target_cpu`). Required additional work, all validated:
 
-1. **i386 V8** — patch zig-v8-fork's `build.zig` `GnArgs` Linux case for `arch == .x86`:
+1. **i386 V8** — apply
+   [`patches/0001-zig-v8-fork-ia32-gn-args.patch`](../patches/0001-zig-v8-fork-ia32-gn-args.patch)
+   to `zig-v8-fork`, which adds an `arch == .x86` arm to `GnArgs`:
    `target_cpu="x86"` + `v8_enable_pointer_compression=false` +
    `v8_enable_sandbox=false` + `treat_warnings_as_errors=false`. Produces real
    Intel 80386 objects (~123 MB vs ~141 MB x86_64). Needs `gcc-multilib` for
    `bits/wordsize.h`.
 2. **Rust FFI cross** — pass `-Dcargo_target=i686-unknown-linux-musl` to `zig build`.
-   This requires an upstream-able patch to `build.zig`'s `linkRust`: add a `cargo_target`
-   build option; when set, `cargo` gets `--target <triple>` **and** the archive is read
+   This needs the `cargo_target` patch to `build.zig`'s `linkRust` — **published as
+   [`patches/0002-lightpanda-ia32-port.patch`](../patches/0002-lightpanda-ia32-port.patch)**:
+   when set, `cargo` gets `--target <triple>` **and** the archive is read
    from `<target-dir>/<triple>/release/liblightpanda_ffi.a` (cargo writes cross-target
    output into the triple subdir, not the host `release/` path — otherwise the host x86_64
    Rust archive gets linked into the i386 exe → `is incompatible with elf_i386`).

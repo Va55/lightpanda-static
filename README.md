@@ -17,27 +17,26 @@ The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship 
 
 | Asset | Arch | Size | Built from |
 |-------|------|------|------------|
-| `lightpanda-1.0.1-r1-x86_64-musl` | x86_64 | ~199 MiB | upstream `1.0.1` |
-| `lightpanda-1.0.1-r1-i686-musl`   | i386 (32-bit x86) | ~170 MiB | upstream `1.0.1` |
+| `lightpanda-1.0.1-r1-x86_64-musl` | x86_64 | ~199 MiB | `main` @ `f734e7f` |
+| `lightpanda-1.0.1-r1-i686-musl`   | i386 (32-bit x86) | ~170 MiB | `main` @ `f734e7f` |
 
-Releases are named `<upstream tag>-r<build revision>`. They are deliberately **not** named
+Releases are named `<release line>-r<build revision>`. They are deliberately **not** named
 after the version string the binary prints — see below.
 
-> **Version-string note:** `lightpanda version` prints **`1.1.0-dev`**, which is *not* the
-> release these binaries were built from. Upstream's `build.zig.zon` declares the *next*
-> development version, and tags `1.0.1`, `1.0.2` and `1.0.3` **all** ship
-> `.version = "1.1.0-dev"`. Naming assets after that string would give three different
-> browsers the same name, so releases are named after the upstream **tag** instead. The
-> exact commit is pinned in [VERSIONS.md](VERSIONS.md): `lightpanda-io/browser` tag
-> `1.0.1` = `99edca45844b5968c3ec8e50ad8e1acec8f3b759`.
+> **Version-string note:** `lightpanda version` prints **`1.1.0-dev`**, which is *not* a
+> release identifier. Upstream's `build.zig.zon` declares the *next* development version,
+> and tags `1.0.1`, `1.0.2` and `1.0.3` **all** ship `.version = "1.1.0-dev"`, so naming
+> assets after that string would make three different browsers interchangeable. Releases
+> use the release line instead, and the **exact commit** is pinned in
+> [VERSIONS.md](VERSIONS.md): `lightpanda-io/browser` `f734e7f6` — upstream `main`,
+> 91 commits after tag `1.0.1` (which is `99edca45`).
 
-> **Arch note:** the 32-bit asset file is named `i686` (its real ISA floor — V8 requires
-> CMOV/MMX, i.e. Pentium Pro). "i386" is the human-facing label: that is how Debian and the
-> ecosystem name 32-bit x86, and it's what the port is for. A true 80386/486 (no CMOV) cannot
-> run it — same situation as Debian's `i386` arch, which also requires i686 in practice.
-> Verified on SSE2-class silicon only (Core Duo L2500); pre-SSE2 parts (Pentium Pro/II/III)
-> are untested, and V8's ia32 backend has historically required SSE2, so treat the floor as
-> SSE2-class until someone reports otherwise.
+> **Arch note:** the 32-bit asset file is named `i686` (its real ISA floor). "i386" is the
+> human-facing label: that is how Debian and the ecosystem name 32-bit x86, and it's what
+> the port is for. The floor is **SSE2** (Pentium 4 / Athlon 64 / Core Duo and newer), not
+> i686/CMOV: V8's ia32 build aborts on anything without SSE2 — under
+> `qemu-i386 -cpu pentium3` it fails with `Check failed: cpu.has_sse2()`. Verified working
+> on a real Core Duo L2500 (Yonah).
 
 ## Install
 
@@ -78,10 +77,12 @@ correct), which exercises V8's JIT on ia32.
 
 ## Build from source
 
-Full toolchain and commands in [build/README.md](build/README.md). The key built-in
+Full toolchain and commands in [build/README.md](build/README.md), and the actual i386 source
+delta in [patches/](patches/) (V8 GN args + the 32-bit port). The key built-in
 ingredient is [build/musl_glibc_shim.c](build/musl_glibc_shim.c) — a small glibc-symbol
 compat layer (`*64` LFS family, `__isoc23_*`, fortify `_chk`, `backtrace*`,
-`__libc_stack_end`) folded into the V8 archive so Lightpanda links pure-musl.
+`__libc_stack_end`) folded into the V8 archive so Lightpanda links pure-musl. One
+unconditional shim serves both architectures.
 
 ```sh
 # x86_64

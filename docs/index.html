@@ -55,8 +55,8 @@
     <tr><td><a href="https://github.com/Va55/lightpanda-static/releases/download/v1.0.1-r1/lightpanda-1.0.1-r1-x86_64-musl">lightpanda-1.0.1-r1-x86_64-musl</a></td><td>x86_64</td><td>~199 MiB</td></tr>
     <tr><td><a href="https://github.com/Va55/lightpanda-static/releases/download/v1.0.1-r1/lightpanda-1.0.1-r1-i686-musl">lightpanda-1.0.1-r1-i686-musl</a></td><td>i386 (32-bit)</td><td>~170 MiB</td></tr>
   </table>
-  <p><small>Built from upstream Lightpanda tag <code>1.0.1</code>. Releases are named <code>&lt;upstream tag&gt;-r&lt;build&gt;</code>, not after the version string: <code>lightpanda version</code> prints <code>1.1.0-dev</code>, which is upstream's next-development string and is identical across upstream tags 1.0.1, 1.0.2 and 1.0.3. Pins: <a href="https://github.com/Va55/lightpanda-static/blob/main/VERSIONS.md">VERSIONS.md</a>.</small></p>
-  <p><small>Note: the 32-bit asset file is named <code>i686</code> (its real ISA floor — V8 needs CMOV/MMX); "i386" is the human-facing label for 32-bit x86, as Debian uses it. Tested on SSE2-class CPUs only (Core Duo); pre-SSE2 parts are untested.</small></p>
+  <p><small>Built from upstream lightpanda-io/browser <code>main</code> @ <code>f734e7f</code> (2026-10-18 — the <code>1.0.1</code> line plus 91 commits). Releases are named <code>&lt;release line&gt;-r&lt;build&gt;</code>, not after the version string: <code>lightpanda version</code> prints <code>1.1.0-dev</code>, which is upstream's next-development string and is identical across upstream tags 1.0.1, 1.0.2 and 1.0.3. Pins: <a href="https://github.com/Va55/lightpanda-static/blob/main/VERSIONS.md">VERSIONS.md</a>.</small></p>
+  <p><small>Note: the 32-bit asset file is named <code>i686</code> (its real ISA floor). "i386" is the human-facing label for 32-bit x86, as Debian uses it. The floor is <strong>SSE2</strong> (Pentium 4 / Athlon 64 / Core Duo and newer): V8's ia32 build aborts without it (<code>Check failed: cpu.has_sse2()</code>), and it is verified working on a real Core Duo L2500.</small></p>
 
   <h2>Install &amp; verify</h2>
 <pre><code>sudo install -m 0755 lightpanda-*-musl /usr/local/bin/lightpanda
@@ -69,7 +69,8 @@ lightpanda fetch --dump semantic_tree_text https://example.com
   <h2>What's here</h2>
   <ul>
     <li>Full <strong>build recipe</strong> — see <a href="https://github.com/Va55/lightpanda-static/blob/main/build/README.md">build/README.md</a>.</li>
-    <li><a href="https://github.com/Va55/lightpanda-static/blob/main/build/musl_glibc_shim.c">musl_glibc_shim.c</a> — a small glibc-symbol compat layer folded into the V8 archive so Lightpanda links pure-musl.</li>
+    <li><a href="https://github.com/Va55/lightpanda-static/tree/main/patches">patches/</a> — the actual i386 source delta: the <code>zig-v8-fork</code> GN-args patch and the 17-file Lightpanda 32-bit port (+113/−47).</li>
+    <li><a href="https://github.com/Va55/lightpanda-static/blob/main/build/musl_glibc_shim.c">musl_glibc_shim.c</a> — a small glibc-symbol compat layer folded into the V8 archive so Lightpanda links pure-musl (one unconditional shim for both arches).</li>
     <li><strong>i386 port</strong>: the capability toolchain carries directly to an i386 Chromium if it's ever needed.</li>
   </ul>
 
