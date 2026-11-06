@@ -21,6 +21,16 @@ What each step means:
 | `sha256sum -c SHA256SUMS` | the file is the one described by `SHA256SUMS`, which is committed in this repo |
 | `gh attestation verify` | the same digest carries a Sigstore build-provenance attestation produced by this repo's `attest-release` workflow, logged in the public transparency log |
 
+The attestation is a SLSA v1 provenance statement whose subject is the asset digest and
+whose builder is this repository's `.github/workflows/attest-release.yml` at
+`refs/heads/main`. `gh attestation verify` needs **gh ≥ 2.49**; on an older client you can at
+least confirm an attestation exists for the digest (existence only — use a recent `gh` or
+`cosign` to verify the signature):
+
+```sh
+gh api "repos/Va55/lightpanda-static/attestations/sha256:$(sha256sum "$asset" | cut -d' ' -f1)"
+```
+
 The attestation is created by `.github/workflows/attest-release.yml`, which **only
 attests files that match the `SHA256SUMS` in the checked-out commit** — so the chain is
 `protected main → SHA256SUMS → published asset → attestation → your download`.
