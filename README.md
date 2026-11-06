@@ -17,8 +17,8 @@ The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship 
 
 | Asset | Arch | Size | Built from |
 |-------|------|------|------------|
-| `lightpanda-1.0.1-r1-x86_64-musl` | x86_64 | ~199 MiB | `main` @ `f734e7f` |
-| `lightpanda-1.0.1-r1-i686-musl`   | i386 (32-bit x86) | ~170 MiB | `main` @ `f734e7f` |
+| `lightpanda-1.0.1-main.20261018-r1-x86_64-musl` | x86_64 | ~199 MiB | `main` @ `f734e7f` |
+| `lightpanda-1.0.1-main.20261018-r1-i686-musl`   | i386 (32-bit x86) | ~170 MiB | `main` @ `f734e7f` |
 
 Releases are named `<release line>-r<build revision>`. They are deliberately **not** named
 after the version string the binary prints — see below.

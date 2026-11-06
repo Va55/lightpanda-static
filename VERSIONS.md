@@ -14,7 +14,7 @@ What the released binaries were actually built from. The recipe is in
 | Version string inside the binary | `1.1.0-dev` |
 
 The build tree was a shallow clone of `main` (no tags present), so the binaries are a
-**post-1.0.1 main snapshot**, not the `1.0.1` tag itself. The release is named `1.0.1-r1`
+**post-1.0.1 main snapshot**, not the `1.0.1` tag itself. The release is named `1.0.1-main.20261018-r1`
 because it is based on the `1.0.1` release line; the exact commit is the one above.
 ```sh
 git clone https://github.com/lightpanda-io/browser
@@ -60,8 +60,8 @@ which is why releases here are named after the release line, not the string.
 
 | Asset | Arch | SHA-256 |
 |---|---|---|
-| `lightpanda-1.0.1-r1-x86_64-musl` | x86_64 | `bbf780f79fc1102dd9a1efdbf2847e92f0fecd3dd74416ffc0eed83626a05f16` |
-| `lightpanda-1.0.1-r1-i686-musl` | i386 (32-bit x86) | `def6f4ff9e22f67865267f2a00800f2361badc2bc65e65f5dd95b2e767296e74` |
+| `lightpanda-1.0.1-main.20261018-r1-x86_64-musl` | x86_64 | `bbf780f79fc1102dd9a1efdbf2847e92f0fecd3dd74416ffc0eed83626a05f16` |
+| `lightpanda-1.0.1-main.20261018-r1-i686-musl` | i386 (32-bit x86) | `def6f4ff9e22f67865267f2a00800f2361badc2bc65e65f5dd95b2e767296e74` |
 
 `sha256sum -c SHA256SUMS` after downloading both assets.
 
