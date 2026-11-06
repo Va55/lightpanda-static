@@ -82,9 +82,46 @@ So the real floor is **SSE2-class: Pentium 4 / Athlon 64 / Core Duo and newer**,
 "CMOV/MMX Pentium Pro" as earlier notes claimed. Confirmed working on a Core Duo L2500
 (Yonah); 80386/486/Pentium/Pentium II/III are out.
 
-## Known provenance gaps
+## Reproducibility status (measured 2026-11-06)
 
-- No second independent build has been compared byte-for-byte, so the binaries are
-  **not yet verified reproducible**.
-- The `browser` tree was a shallow clone of `main`; nothing else about the build was
-  recorded beyond the pins above (`patches/` now carries the full source delta).
+Rebuild experiments on the original builder (24-core, Debian 13, Docker), all from
+`f734e7f` with the pinned `libc_v8_musl.a` and Zig `0.17.0`:
+
+| Build | Tree path | SHA-256 (unstripped) |
+|---|---|---|
+| released `x86_64` asset | `/build/src/browser` (image of 2026-10-18 ~13:37) | `bbf780f79fc1…` |
+| rebuild A | `/repro/browser` | `7f60e0505155…` |
+| rebuild B | `/build/src/browser` | `c0932e9cb79c…` |
+| rebuild C | `/build/src/browser` | `6d366b31fc0b…` |
+| rebuild D | `/build/src/browser` | `70da24ffb17d…` |
+
+**1. Codegen is deterministic; debug info is not.** Rebuilds C and D used identical
+inputs, the same path and fresh caches: the unstripped binaries differ
+(`6d366b31…` vs `70da24ff…`, both exactly 208,882,192 B) but their **stripped** hashes are
+identical (`5287049b…`). Only `.debug_info`, `.debug_str` and `.debug_line` differ.
+
+**2. The released `i686` asset is exactly reproducible from the recorded inputs.** The
+builder's own output from 17:51 (`/build/src/browser/zig-out/bin/lightpanda`, 177,833,912 B)
+hashes to `def6f4ff…` — byte-identical to the published `i686` asset.
+
+**3. The released `x86_64` asset is not reproducible from the recorded inputs.** Its
+stripped hash is `ec13f643…`, which no rebuild reproduces (rebuilds strip to `5287049b…`).
+Cause: it was built at 13:37 in an *earlier container image*. The `lp-musl` image used for
+the `i686` build was created at 15:19 the same day (`sha256:dda14a65…`), after that build.
+The image is a mutable tag and the original state was not preserved.
+
+Practical consequences:
+
+- **Verify integrity with `SHA256SUMS`, not by rebuilding.**
+- To make this fully reproducible: pin the build image **by digest**, and publish
+  **stripped** binaries — stripped output is stable across runs, unstripped is not.
+
+### Link inputs (for anyone re-running this)
+
+| Archive | SHA-256 |
+|---|---|
+| `libc_v8_musl.a` (x86_64, shim folded in) | `212974a2df03716198444866752b99ce67acb18b0d02118c6bb033abd5f53849` |
+| `libc_v8_musl_ia32.a` (i686, shim folded in) | `a7cb9e51591af85070ab76da98860a55dcfc2b0687f4d23ced7929b6e9d78d9c` |
+
+Toolchain in the image used for the `i686` build: Zig `0.17.0`, rustc `1.99.1`,
+Debian clang `19.1.7`.

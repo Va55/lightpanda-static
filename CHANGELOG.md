@@ -66,3 +66,19 @@ IEEE-754 double formatting. Pre-SSE2 CPUs remain untested.
   `15.5.35.13` recorded in `VERSIONS.md`.
 - **Shim clarified**: one *unconditional* shim serves both architectures — verified from the
   i686 binary's exported `mmap64`/`open64`/`fopen64`/`stat64`/`readdir64`.
+
+### Reproducibility measured
+
+Four rebuilds on the original builder, all from `f734e7f` with the pinned V8 archive:
+
+- **Codegen is deterministic, debug info is not.** Two same-input, same-path, fresh-cache
+  rebuilds differ unstripped (`6d366b31…` vs `70da24ff…`) but are **byte-identical when
+  stripped** (`5287049b…`); only `.debug_info`/`.debug_str`/`.debug_line` differ.
+- **`i686` asset reproduced exactly**: the builder's own output hashes to `def6f4ff…`,
+  identical to the published asset.
+- **`x86_64` asset not reproducible**: its stripped hash is `ec13f643…`, which no rebuild
+  reaches — it was built at 13:37 in an earlier container image; the `lp-musl` image used
+  for the `i686` build was created at 15:19 the same day.
+
+Consequence: verify integrity with `SHA256SUMS`, not by rebuilding. Full evidence, plus
+the SHA-256 of both `libc_v8_*.a` link inputs, in [VERSIONS.md](VERSIONS.md).
