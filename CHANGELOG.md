@@ -103,3 +103,28 @@ What a consumer can now check, and what it rests on:
   rustc 1.99.1, clang 19.1.7, image digest, V8 archive hashes) instead of prose.
 - **Verification + disclosure.** `VERIFY.md` (including an explicit "what is not verifiable
   yet") and `SECURITY.md` (private reporting, scope split, hardening differences).
+
+## v1.0.1-main.20261018-r2 — CI-built, stripped, reproducible
+
+First release built by CI rather than on an ad-hoc container.
+
+- **`build-release.yml`** runs on the self-hosted runner (24 cores/30 GB — V8 needs it),
+  builds each architecture **twice** with separate scratch dirs and cold caches, and fails the
+  run unless the stripped binaries are byte-identical.
+  - x86_64 `605f2e2a…` (75,973,544 B) · i686 `84eb5f92…` (72,440,116 B)
+  - the i686 hash equals the historical builder output, so the published patches are complete
+- **Stripped**: 72/69 MiB instead of 199/170 MiB, identical code.
+- **Genuine build provenance**: the Sigstore/SLSA attestation is produced by the workflow that
+  compiled the binaries (plus GitHub's own release attestation from immutable releases).
+- **`build/ci-build.sh`** holds the build logic (auditable, versioned), `BUILDINFO.txt` ships
+  with the release and records every input — commits, V8 archive hashes, shim/patch hashes,
+  image digest, toolchain versions.
+- `build/Dockerfile` now pins the base image by digest and Rust by version, since an unpinned
+  `debian:trixie` + `stable` rust would drift and change the bytes.
+
+Notes from getting it green: the runner's network DNS-filters `sigstore.dev` to a sinkhole
+(`10.250.249.67` / `::1`, Whalebone CA), so the workflow resolves `fulcio`, `rekor` and
+`tuf-repo-cdn` over DoH into `/etc/hosts` for the job and pre-flights them before signing.
+The `gh` CLI must exist on the runner for the publish step (it now does).
+
+`r1` stays published for lineage but was built before CI existed and is not reproducible.

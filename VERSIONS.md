@@ -60,8 +60,10 @@ which is why releases here are named after the release line, not the string.
 
 | Asset | Arch | SHA-256 |
 |---|---|---|
-| `lightpanda-1.0.1-main.20261018-r1-x86_64-musl` | x86_64 | `bbf780f79fc1102dd9a1efdbf2847e92f0fecd3dd74416ffc0eed83626a05f16` |
-| `lightpanda-1.0.1-main.20261018-r1-i686-musl` | i386 (32-bit x86) | `def6f4ff9e22f67865267f2a00800f2361badc2bc65e65f5dd95b2e767296e74` |
+| `lightpanda-1.0.1-main.20261018-r2-x86_64-musl` | x86_64 | `605f2e2a2f748438dd9889634280479c7076410a635235db1400e55471d78b5a` |
+| `lightpanda-1.0.1-main.20261018-r2-i686-musl` | i386 (32-bit x86) | `84eb5f92ce6fe8e61bd1bd030267790fae878a8a5356c3f86c2bc91d2f02e16c` |
+| `lightpanda-1.0.1-main.20261018-r1-x86_64-musl` (historical) | x86_64 | `bbf780f79fc1102dd9a1efdbf2847e92f0fecd3dd74416ffc0eed83626a05f16` |
+| `lightpanda-1.0.1-main.20261018-r1-i686-musl` (historical) | i386 (32-bit x86) | `def6f4ff9e22f67865267f2a00800f2361badc2bc65e65f5dd95b2e767296e74` |
 
 `sha256sum -c SHA256SUMS` after downloading both assets.
 
@@ -82,10 +84,30 @@ So the real floor is **SSE2-class: Pentium 4 / Athlon 64 / Core Duo and newer**,
 "CMOV/MMX Pentium Pro" as earlier notes claimed. Confirmed working on a Core Duo L2500
 (Yonah); 80386/486/Pentium/Pentium II/III are out.
 
-## Reproducibility status (measured 2026-11-06)
+## Reproducibility status
 
-Rebuild experiments on the original builder (24-core, Debian 13, Docker), all from
-`f734e7f` with the pinned `libc_v8_musl.a` and Zig `0.17.0`:
+### Current release `r2` — CI-built and reproducible (2026-11-06)
+
+`.github/workflows/build-release.yml` on the self-hosted runner builds each architecture
+twice, from separate scratch dirs with cold zig caches, and the run fails unless the
+**stripped** binaries are byte-identical:
+
+| Asset | SHA-256 (stripped) | Size |
+|---|---|---|
+| `lightpanda-1.0.1-main.20261018-r2-x86_64-musl` | `605f2e2a2f748438dd9889634280479c7076410a635235db1400e55471d78b5a` | 75,973,544 B |
+| `lightpanda-1.0.1-main.20261018-r2-i686-musl` | `84eb5f92ce6fe8e61bd1bd030267790fae878a8a5356c3f86c2bc91d2f02e16c` | 72,440,116 B |
+
+Build inputs for `r2` (also in the release's `BUILDINFO.txt`): image
+`sha256:41195f9be65bb3325c3b33b9876bfbd654bc9aba8be0fb33095310d90e499c9a`, built from
+`build/Dockerfile` with base `debian:trixie@sha256:9c6e3814…` and Rust pinned to 1.99.1.
+
+A separate check of the same recipe (fresh image + fresh clone + only the published patches)
+reproduced the historical i686 builder output exactly (`84eb5f92…`).
+
+### Historical `r1` — not reproducible
+
+Rebuild experiments on the original builder, all from `f734e7f` with the pinned
+`libc_v8_musl.a` and Zig `0.17.0`:
 
 | Build | Tree path | SHA-256 (unstripped) |
 |---|---|---|
@@ -95,20 +117,15 @@ Rebuild experiments on the original builder (24-core, Debian 13, Docker), all fr
 | rebuild C | `/build/src/browser` | `6d366b31fc0b…` |
 | rebuild D | `/build/src/browser` | `70da24ffb17d…` |
 
-**1. Codegen is deterministic; debug info is not.** Rebuilds C and D used identical
-inputs, the same path and fresh caches: the unstripped binaries differ
-(`6d366b31…` vs `70da24ff…`, both exactly 208,882,192 B) but their **stripped** hashes are
-identical (`5287049b…`). Only `.debug_info`, `.debug_str` and `.debug_line` differ.
+**Codegen is deterministic; debug info is not.** Rebuilds C and D used identical inputs, the
+same path and fresh caches: the unstripped binaries differ (`6d366b31…` vs `70da24ff…`, both
+exactly 208,882,192 B) but their **stripped** hashes are identical. Only `.debug_info`,
+`.debug_str` and `.debug_line` differ — hence stripped releases.
 
-**2. The released `i686` asset is exactly reproducible from the recorded inputs.** The
-builder's own output from 17:51 (`/build/src/browser/zig-out/bin/lightpanda`, 177,833,912 B)
-hashes to `def6f4ff…` — byte-identical to the published `i686` asset.
-
-**3. The released `x86_64` asset is not reproducible from the recorded inputs.** Its
-stripped hash is `ec13f643…`, which no rebuild reproduces (rebuilds strip to `5287049b…`).
-Cause: it was built at 13:37 in an *earlier container image*. The `lp-musl` image used for
-the `i686` build was created at 15:19 the same day (`sha256:dda14a65…`), after that build.
-The image is a mutable tag and the original state was not preserved.
+The `r1` `i686` asset matched the builder's own output exactly (`def6f4ff…`). The `r1`
+`x86_64` asset did not reproduce from any rebuild: it was built in an earlier container image,
+and the `lp-musl` image used for the i686 build was created at 15:19 the same day, after that
+build. Releases from `r2` onward do not depend on an unpreserved image.
 
 Practical consequences:
 

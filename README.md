@@ -13,17 +13,17 @@ Chromium should that ever be needed.
 ## Trust & verification
 
 - **Verifiable downloads** — [VERIFY.md](VERIFY.md): checksums, static-ness proof, and
-  `gh attestation verify` against a Sigstore build-provenance attestation produced by
-  [`.github/workflows/attest-release.yml`](.github/workflows/attest-release.yml), which
-  only attests files matching the committed `SHA256SUMS`.
+  `gh attestation verify`. Since `r2` the attestation is **build** provenance: created by the
+  workflow that compiled the binaries, on a reproducible build (two identical passes).
 - **Immutable releases**, protected `v*` tags (no force-push, no deletion), and `main`
-  blocks force-push/deletion.
+  blocks force-push/deletion. Immutable releases also add a GitHub release attestation
+  binding the release to its commit.
 - **Published build environment** — [build/Dockerfile](build/Dockerfile) and
   [build/toolchain.lock](build/toolchain.lock); the exact upstream commit, dependency
   revisions and V8 archive hashes are in [VERSIONS.md](VERSIONS.md).
-- **Known limits stated, not hidden** — no CI-built binaries, the x86_64 asset is not
-  bit-reproducible, debug info is not bit-stable. See *“What is not verifiable yet”* in
-  [VERIFY.md](VERIFY.md).
+- **Known limits stated, not hidden** — the historical `r1` build is not reproducible, and
+  only a self-maintained runner has the resources to build this. See *“What is not
+  verifiable yet”* in [VERIFY.md](VERIFY.md).
 - **Security policy** — [SECURITY.md](SECURITY.md), including the deliberate hardening
   differences (fortify `_chk` no-ops; V8 sandbox and pointer compression off on i386).
 
@@ -32,10 +32,18 @@ Chromium should that ever be needed.
 The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship as
 **GitHub Releases** — statically-linked musl, archived per architecture:
 
-| Asset | Arch | Size | Built from |
-|-------|------|------|------------|
-| `lightpanda-1.0.1-main.20261018-r1-x86_64-musl` | x86_64 | ~199 MiB | `main` @ `f734e7f` |
-| `lightpanda-1.0.1-main.20261018-r1-i686-musl`   | i386 (32-bit x86) | ~170 MiB | `main` @ `f734e7f` |
+| Asset | Arch | Size | Built by |
+|-------|------|------|----------|
+| `lightpanda-1.0.1-main.20261018-r2-x86_64-musl` | x86_64 | ~72 MiB | CI (`build-release.yml`) |
+| `lightpanda-1.0.1-main.20261018-r2-i686-musl`   | i386 (32-bit x86) | ~69 MiB | CI (`build-release.yml`) |
+
+The `r2` assets are **stripped** — same code as `r1`, minus debug info, which is why they are
+about a third of the size. `v1.0.1-main.20261018-r1` is kept for lineage, but it was built
+before CI existed, in a container image that was not preserved, so it is not reproducible.
+
+Builds run on a self-hosted runner (24 cores/30 GB — V8 needs that), from the pinned sources
+in [VERSIONS.md](VERSIONS.md), **twice per release**; the workflow fails unless both passes
+produce byte-identical stripped binaries.
 
 Releases are named `<release line>-main.<yyyymmdd>-r<build revision>`. They are deliberately **not** named
 after the version string the binary prints — see below.

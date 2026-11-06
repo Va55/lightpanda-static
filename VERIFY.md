@@ -6,10 +6,10 @@ below fails, treat the download as untrusted and open an issue.
 ## 1. Integrity and provenance (recommended)
 
 ```sh
-tag=v1.0.1-main.20261018-r1
+tag=v1.0.1-main.20261018-r2
 asset=lightpanda-${tag#v}-x86_64-musl
 
-gh release download "$tag" --repo Va55/lightpanda-static   # gets both binaries + SHA256SUMS
+gh release download "$tag" --repo Va55/lightpanda-static   # both binaries + SHA256SUMS + BUILDINFO.txt
 sha256sum -c SHA256SUMS                                    # bytes match the committed checksums
 gh attestation verify "$asset" --repo Va55/lightpanda-static
 ```
@@ -22,14 +22,22 @@ What each step means:
 | `gh attestation verify` | the same digest carries a Sigstore build-provenance attestation produced by this repo's `attest-release` workflow, logged in the public transparency log |
 
 The attestation is a SLSA v1 provenance statement whose subject is the asset digest and
-whose builder is this repository's `.github/workflows/attest-release.yml` at
-`refs/heads/main`. `gh attestation verify` needs **gh ≥ 2.49**; on an older client you can at
+whose builder is this repository's `.github/workflows/build-release.yml` at
+`refs/heads/main`. Since `r2` that workflow **compiles** the binaries (it is not merely
+attesting an upload), and it builds them twice, failing the run unless both passes produce
+byte-identical stripped binaries. The release itself also carries GitHub's own release
+attestation, which immutable releases create automatically.
+
+`gh attestation verify` needs **gh ≥ 2.49**; on an older client you can at
 least confirm an attestation exists for the digest (existence only — use a recent `gh` or
 `cosign` to verify the signature):
 
 ```sh
 gh api "repos/Va55/lightpanda-static/attestations/sha256:$(sha256sum "$asset" | cut -d' ' -f1)"
 ```
+
+`BUILDINFO.txt` (attached to each release) lists every input: source commits, V8 archive
+hashes, shim and patch hashes, build-image digest and zig/rustc/clang versions.
 
 The attestation is created by `.github/workflows/attest-release.yml`, which **only
 attests files that match the `SHA256SUMS` in the checked-out commit** — so the chain is
@@ -90,21 +98,26 @@ cd src/browser && zig build -Dtarget=x86_64-linux-musl -Doptimize=ReleaseFast \
 
 Status, stated plainly:
 
-- **i686 asset: reproduces exactly.** The builder's own output hashes to the published
-  `def6f4ff…`.
-- **x86_64 asset: does not reproduce today** — it was built in an earlier container image
-  that was not preserved.
-- **Debug info is not bit-stable** even with identical inputs; **stripped** output is
-  (`5287049b…` from two independent same-path builds). If you compare builds, compare
-  stripped binaries.
+- **`r2` assets are reproducible and CI-built.** The workflow builds each architecture twice
+  with cold caches and fails unless the stripped bytes match; the published i686 hash also
+  equals the historical builder output (`84eb5f92…`), so the published patches are complete.
+- **`r1` assets are not reproducible** — built before CI existed, in a container image that
+  was not preserved. Kept for lineage only.
+- **Debug info is not bit-stable** even with identical inputs; **stripped** output is. That is
+  why releases are stripped.
+- **V8's own build is not verified reproducible.** The linked `libc_v8_*.a` archives are
+  rebuilt only when absent from the cache; their hashes are recorded in `BUILDINFO.txt`, so a
+  mismatch would be visible, but V8 itself is not re-derived per release.
 
 ## 5. What is *not* verifiable yet
 
 Published for honesty rather than hidden:
 
-- Binaries are **not built by CI**; the workflow only attests files that match the committed
-  checksums. The chain proves the artifact ↔ repo ↔ checksum link, not that the binary
-  contains no additional code beyond the patches.
-- The `x86_64` asset cannot be rebuilt bit-for-bit (missing build image).
-- Single-maintainer project: no independent second-party build has been published.
-- The V8 archive itself is a build artifact; V8's build is not verified reproducible.
+- Builds run on a **self-hosted runner**, so the attestation proves “this repo's workflow
+  compiled these bytes in this run”, not “a GitHub-hosted runner did”. The runner is one
+  machine the maintainer controls; that is the same trust level as any project building on
+  its own hardware, and it is visible in the provenance.
+- **V8 is not rebuilt per release** — the linked archives come from a cache keyed by inputs,
+  with their hashes recorded in `BUILDINFO.txt`.
+- Single-maintainer project: no independent second-party build has been published yet.
+- The `r1` assets cannot be rebuilt (missing build image).
