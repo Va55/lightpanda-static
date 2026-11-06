@@ -82,3 +82,24 @@ Four rebuilds on the original builder, all from `f734e7f` with the pinned V8 arc
 
 Consequence: verify integrity with `SHA256SUMS`, not by rebuilding. Full evidence, plus
 the SHA-256 of both `libc_v8_*.a` link inputs, in [VERSIONS.md](VERSIONS.md).
+
+### Trust surface (2026-11-06)
+
+What a consumer can now check, and what it rests on:
+
+- **Immutable release.** Immutable releases are enabled on the repo, and this release was
+  re-created so it is covered (`immutable: true`); asset bytes can no longer be replaced or
+  deleted. Digests are unchanged (`bbf780f7…` / `def6f4ff…`).
+- **Protected refs.** Two rulesets, both `enforcement: active` with **no bypass actors**
+  (`current_user_can_bypass: never`): `main` (no force-push, no deletion) and `v*`
+  (no update, no deletion, no force-push). An admin can still edit the ruleset itself —
+  that is a GitHub property, not something a repo can remove.
+- **Sigstore/SLSA provenance.** `.github/workflows/attest-release.yml` downloads a release,
+  refuses to continue unless the files match the committed `SHA256SUMS`, then emits a SLSA v1
+  attestation (keyless OIDC, transparency log). Verified produced for both digests, builder
+  `…/.github/workflows/attest-release.yml@refs/heads/main`. Actions are pinned by commit SHA;
+  Dependabot keeps them current.
+- **Published environment.** `build/Dockerfile` + `build/toolchain.lock` (zig 0.17.0,
+  rustc 1.99.1, clang 19.1.7, image digest, V8 archive hashes) instead of prose.
+- **Verification + disclosure.** `VERIFY.md` (including an explicit "what is not verifiable
+  yet") and `SECURITY.md` (private reporting, scope split, hardening differences).
