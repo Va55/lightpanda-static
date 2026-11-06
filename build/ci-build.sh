@@ -81,12 +81,22 @@ if [ ! -f "$ARCH_DIR/libc_v8_musl.a" ] || [ ! -f "$ARCH_DIR/libc_v8_musl_ia32.a"
             for tgt in x86_64 x86; do
                 zig build -Dtarget=${tgt}-linux-musl -Doptimize=ReleaseFast prepare-v8
                 zig build -Dtarget=${tgt}-linux-musl -Doptimize=ReleaseFast build-v8
-                a=$(ls -t out/linux/release_*/obj/zig/libc_v8.a | head -1)
-                [ -n "$a" ] || { echo "no libc_v8.a produced for ${tgt}"; exit 1; }
+                # The out/ layout is not stable across zig-v8-fork revisions (it used to be
+                # out/linux/release_<hash>/obj/zig/), so locate the archive instead of
+                # guessing the path. Newest wins: we just built this target.
+                a=$(find out -type f -name libc_v8.a -printf "%T@ %p\n" 2>/dev/null \
+                    | sort -n | tail -1 | cut -d" " -f2-)
+                if [ -z "$a" ]; then
+                    echo "no libc_v8.a produced for ${tgt}; out/ contains:"
+                    find out -maxdepth 4 -name "*.a" 2>/dev/null | head -20
+                    exit 1
+                fi
+                echo "${tgt}: archive at $a ($(stat -c%s "$a") bytes)"
                 work=$(mktemp -d)
                 cp "$a" "$work/libc_v8_musl.a"
                 zig cc -target ${tgt}-linux-musl -O2 -c /repo/build/musl_glibc_shim.c -o "$work/shim.o"
                 zig ar r "$work/libc_v8_musl.a" "$work/shim.o"
+                zig ar t "$work/libc_v8_musl.a" | grep -qx shim.o || { echo "shim not folded for ${tgt}"; exit 1; }
                 case "$tgt" in
                     x86) cp "$work/libc_v8_musl.a" /v8cache/libc_v8_musl_ia32.a ;;
                     *)   cp "$work/libc_v8_musl.a" /v8cache/libc_v8_musl.a ;;
