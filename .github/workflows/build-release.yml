@@ -176,6 +176,7 @@ jobs:
           TAG: v${{ inputs.asset_version }}
         run: |
           set -euo pipefail
+          command -v gh >/dev/null || { echo "::error::the gh CLI must be installed on the runner"; exit 1; }
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
             && { echo "::error::release $TAG already exists; release assets are immutable — bump asset_version"; exit 1; }
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
