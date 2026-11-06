@@ -57,6 +57,9 @@ git checkout 99edca45844b5968c3ec8e50ad8e1acec8f3b759   # tag 1.0.1
 
 `sha256sum -c SHA256SUMS` after downloading both assets.
 
+Both hashes were re-verified on the test hosts themselves (`sha256sum` run against the
+executable that was actually exercised), so the published bytes are the tested bytes.
+
 ## Known provenance gaps
 
 Stated plainly so nobody assumes more reproducibility than exists:

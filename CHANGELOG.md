@@ -30,3 +30,16 @@ and the "1.1.0" implies a release that does not exist.
   Alpine, `ldd` prints "Not a valid dynamic program"), and `sha256sum -c SHA256SUMS` added.
 - `VERSIONS.md`: new — pinned upstream commit, all dependency revisions, toolchain, asset
   hashes, and the known provenance gaps.
+
+### Verification
+
+Both assets were run on their native architecture and their SHA-256 matches `SHA256SUMS`
+exactly (so the bytes published are the bytes tested):
+
+| Asset | Host | CPU | `example.com` | Peak RSS |
+|---|---|---|---|---|
+| `x86_64` | Alpine 3.24, 8 GB | Core 2 Duo E6550 @ 2.33 GHz | 0.63 s | 32–49 MB |
+| `i686` | Alpine 3.24, 3.2 GB | Core Duo L2500 @ 1.83 GHz | 0.70 s | 30–42 MB |
+
+JS execution confirmed on the 32-bit host with `lightpanda run` (V8 ia32 JIT), including
+IEEE-754 double formatting. Pre-SSE2 CPUs remain untested.

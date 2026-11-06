@@ -35,6 +35,9 @@ after the version string the binary prints — see below.
 > CMOV/MMX, i.e. Pentium Pro). "i386" is the human-facing label: that is how Debian and the
 > ecosystem name 32-bit x86, and it's what the port is for. A true 80386/486 (no CMOV) cannot
 > run it — same situation as Debian's `i386` arch, which also requires i686 in practice.
+> Verified on SSE2-class silicon only (Core Duo L2500); pre-SSE2 parts (Pentium Pro/II/III)
+> are untested, and V8's ia32 backend has historically required SSE2, so treat the floor as
+> SSE2-class until someone reports otherwise.
 
 ## Install
 
@@ -57,6 +60,21 @@ proves the file executes — the `fetch` above is the real smoke test (~32 MB RS
 `ldd` is avoided on purpose: on Alpine it prints
 `/lib/ld-musl-x86_64.so.1: …: Not a valid dynamic program` rather than the glibc
 "not a dynamic executable" wording.
+
+## Tested on
+
+Both assets were run on real 32-bit and 64-bit musl hosts, and the SHA-256 of each tested
+file matches `SHA256SUMS` exactly.
+
+| Host | CPU | Asset | `example.com` | Wikipedia article | Peak RSS |
+|---|---|---|---|---|---|
+| Alpine 3.24, 8 GB | Core 2 Duo E6550 @ 2.33 GHz, 2 cores | `x86_64` | 0.63 s | 1.24 s | 32–49 MB |
+| Alpine 3.24, 3.2 GB | Core Duo L2500 @ 1.83 GHz, 2 cores | `i686` | 0.70 s | 1.27 s | 30–42 MB |
+
+Both are 2-core, no-HT machines from 2006–2007, so this is roughly the worst case that
+still runs a modern JS engine. JS execution was verified on the 32-bit host via
+`lightpanda run` (arithmetic, `reduce`, string handling and IEEE-754 double formatting all
+correct), which exercises V8's JIT on ia32.
 
 ## Build from source
 
