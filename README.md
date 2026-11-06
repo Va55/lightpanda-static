@@ -10,6 +10,23 @@ this repo proves a usable browser can still be hand-built for one. The capabilit
 toolchain (`target_cpu=x86` V8 + compat shim + sysroot) carries directly to an i386
 Chromium should that ever be needed.
 
+## Trust & verification
+
+- **Verifiable downloads** — [VERIFY.md](VERIFY.md): checksums, static-ness proof, and
+  `gh attestation verify` against a Sigstore build-provenance attestation produced by
+  [`.github/workflows/attest-release.yml`](.github/workflows/attest-release.yml), which
+  only attests files matching the committed `SHA256SUMS`.
+- **Immutable releases**, protected `v*` tags (no force-push, no deletion), and `main`
+  blocks force-push/deletion.
+- **Published build environment** — [build/Dockerfile](build/Dockerfile) and
+  [build/toolchain.lock](build/toolchain.lock); the exact upstream commit, dependency
+  revisions and V8 archive hashes are in [VERSIONS.md](VERSIONS.md).
+- **Known limits stated, not hidden** — no CI-built binaries, the x86_64 asset is not
+  bit-reproducible, debug info is not bit-stable. See *“What is not verifiable yet”* in
+  [VERIFY.md](VERIFY.md).
+- **Security policy** — [SECURITY.md](SECURITY.md), including the deliberate hardening
+  differences (fortify `_chk` no-ops; V8 sandbox and pointer compression off on i386).
+
 ## Releases
 
 The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship as
@@ -20,7 +37,7 @@ The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship 
 | `lightpanda-1.0.1-main.20261018-r1-x86_64-musl` | x86_64 | ~199 MiB | `main` @ `f734e7f` |
 | `lightpanda-1.0.1-main.20261018-r1-i686-musl`   | i386 (32-bit x86) | ~170 MiB | `main` @ `f734e7f` |
 
-Releases are named `<release line>-r<build revision>`. They are deliberately **not** named
+Releases are named `<release line>-main.<yyyymmdd>-r<build revision>`. They are deliberately **not** named
 after the version string the binary prints — see below.
 
 > **Version-string note:** `lightpanda version` prints **`1.1.0-dev`**, which is *not* a

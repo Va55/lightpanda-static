@@ -1,0 +1,27 @@
+# Recorded toolchain — the environment the published binaries were built in
+#
+# The recipe is build/Dockerfile; this file records the concrete versions that
+# recipe resolved to on the build host, as read back out of that image.
+
+build image           lp-musl
+                      sha256:dda14a65fb4a296cfaf28b19fe714e1ea4560adcf67934ee73125a81669042af
+                      built 2026-10-18T15:19+03:00 — used for the i686 asset (17:51)
+base image            debian:trixie (Debian 13.7); digest not recorded (moving tag)
+zig                   0.17.0                      (/opt/zig → /usr/local/bin/zig)
+rustc                 1.99.1 (58cf8f9c3 2026-10-13)
+cargo                 1.99.1 (5f94df478 2026-08-27)
+clang                 Debian clang 19.1.7 (3+b1)
+gcc-multilib          Debian trixie
+v8                    zig-v8-fork b73e4fa2d0afe5036745ae7d332cc5cb7e7adb53, V8 15.5.35.13
+depot_tools           15.5.35.13
+host                  Debian 13 (kernel 6.12), 24 cores, 30 GB RAM, docker
+
+Link inputs actually used (SHA-256):
+
+  libc_v8_musl.a       212974a2df03716198444866752b99ce67acb18b0d02118c6bb033abd5f53849  (x86_64)
+  libc_v8_musl_ia32.a  a7cb9e51591af85070ab76da98860a55dcfc2b0687f4d23ced7929b6e9d78d9c  (i686)
+
+Caveat: the x86_64 asset was built at ~13:37 the same day, i.e. BEFORE this image
+existed (created 15:19). Its exact environment was not preserved, which is why the
+x86_64 asset is not reproducible today while the i686 asset is. See
+../VERSIONS.md, "Reproducibility status".
