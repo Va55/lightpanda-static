@@ -43,7 +43,7 @@ index 9f40cf1..523502a 100644
  
  fn free(ctx: *anyopaque, memory: []u8, alignment: Alignment, _: usize) void {
 diff --git a/src/Watchdog.zig b/src/Watchdog.zig
-index f3bfcaa..f43037d 100644
+index f3bfcaa..58c212b 100644
 --- a/src/Watchdog.zig
 +++ b/src/Watchdog.zig
 @@ -17,6 +17,7 @@
@@ -99,7 +99,7 @@ index f3bfcaa..f43037d 100644
      watchdog.scan(now + 8_000);
      try testing.expectEqual(false, entry.fired);
  }
-@@ -265,7 +266,7 @@ test "Watchdog: no native report once the script report has been logged" {
+@@ -265,11 +266,11 @@ test "Watchdog: no native report once the script report has been logged" {
      defer watchdog.unregister(&entry);
  
      const now = lp.datetime.milliTimestamp(.boot);
@@ -108,6 +108,11 @@ index f3bfcaa..f43037d 100644
      watchdog.scan(now);
  
      // Stands in for the interrupt landing: the worker consumed the report.
+-    _ = env.stall_report_requested_at.swap(0, .acq_rel);
++    _ = env.stall_report_requested_at.swap(0);
+ 
+     watchdog.scan(now + 9_000);
+     try testing.expectEqual(false, entry.native_reported);
 diff --git a/src/atomic_u64.zig b/src/atomic_u64.zig
 new file mode 100644
 index 0000000..61c4c63

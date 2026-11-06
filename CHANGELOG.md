@@ -128,3 +128,21 @@ Notes from getting it green: the runner's network DNS-filters `sigstore.dev` to 
 The `gh` CLI must exist on the runner for the publish step (it now does).
 
 `r1` stays published for lineage but was built before CI existed and is not reproducible.
+
+### Corrected `patches/0002` — a bug found by upstream's own test suite
+
+Running the upstream gates against the port (`make test`, `zig fmt --check`, their exact
+commands) caught a real bug in the published patch: `src/Watchdog.zig`'s test still called
+`.swap(0, .acq_rel)` after the 32-bit atomics shim dropped the ordering argument.
+
+It sits inside a `test "Watchdog: …"` block, so it is compiled out of ReleaseFast builds —
+which is why the release binaries were fine and only the test build broke. Verified rather
+than assumed: rebuilding x86_64 ReleaseFast from the corrected tree yields
+`605f2e2a…`, byte-identical to the published `r2` asset. **The `r2` assets stand; only the
+patch file was wrong.**
+
+With the corrected patch applied to `f734e7f`:
+
+- `make test` — **1898 of 1898 tests passed, 7 skipped**
+- `zig fmt --check ./*.zig ./*/*.zig` — clean
+- patch applies cleanly to a pristine `f734e7f` and reverse-applies to the built tree

@@ -104,6 +104,12 @@ Build inputs for `r2` (also in the release's `BUILDINFO.txt`): image
 A separate check of the same recipe (fresh image + fresh clone + only the published patches)
 reproduced the historical i686 builder output exactly (`84eb5f92…`).
 
+The published patch set was validated against upstream's own gates on `f734e7f`:
+`make test` → **1898/1898 passed, 7 skipped**; `zig fmt --check` clean. That run found one
+test-only bug in the patch (a `.swap(0, .acq_rel)` call site left on the 32-bit atomics shim),
+which is fixed in `patches/0002`; the release binaries are unaffected (`605f2e2a…` reproduced
+byte-identically from the corrected tree).
+
 ### Historical `r1` — not reproducible
 
 Rebuild experiments on the original builder, all from `f734e7f` with the pinned
