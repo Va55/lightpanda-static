@@ -143,7 +143,7 @@ jobs:
           # address (10.250.249.67 / ::1) under a Whalebone sinkhole CA. Public
           # resolvers answer correctly, so pin the real addresses via DoH for this
           # job only. Scoped to /etc/hosts — no system-wide resolver change.
-          for h in fulcio.sigstore.dev tuf-repo-cdn.sigstore.dev; do
+          for h in fulcio.sigstore.dev rekor.sigstore.dev tuf-repo-cdn.sigstore.dev; do
             ip=$(curl -s -m 10 -H 'accept: application/dns-json' \
                    "https://1.1.1.1/dns-query?name=$h&type=A" \
                  | grep -o '"data":"[0-9.]*"' | head -1 | cut -d'"' -f4)
@@ -152,10 +152,17 @@ jobs:
             grep -qE "^[0-9.]+[[:space:]]+$h\$" /etc/hosts \
               || sudo -n sh -c "printf '%s %s\\n' '$ip' '$h' >> /etc/hosts"
           done
-          curl -sS -m 15 -o /dev/null -w 'fulcio reachable: HTTP %{http_code}\n' \
-            https://fulcio.sigstore.dev/api/v2/configuration
+          # Fail fast, before the expensive signing step, if any endpoint is unreachable.
+          for u in https://fulcio.sigstore.dev/api/v2/configuration \
+                   https://rekor.sigstore.dev/api/v1/log/publicKey \
+                   https://tuf-repo-cdn.sigstore.dev/timestamp.json; do
+            curl -sS -m 20 -o /dev/null -w "$u -> HTTP %{http_code}\\n" "$u"
+          done
 
       - name: Attest build provenance
+        env:
+          # the AAAA records are sinkholed to ::1, so prefer IPv4
+          NODE_OPTIONS: --max-http-header-size=32768 --dns-result-order=ipv4first
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
         with:
           subject-path: |
