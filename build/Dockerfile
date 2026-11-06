@@ -9,13 +9,13 @@
 #   docker build -t lp-musl .
 #   docker run --rm -it -v "$PWD/../src:/build/src" lp-musl
 #
-# For reproducible builds, pin the base image by digest instead of the moving
-# `trixie` tag (the digest used for the published binaries was not recorded —
-# see VERSIONS.md, "Reproducibility status").
+# For reproducible builds the base image is pinned by digest and the Rust
+# toolchain by version; both are recorded in toolchain.lock.
 
-FROM debian:trixie
+FROM debian:trixie@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6
 
 ARG ZIG_VER=0.17.0
+ARG RUST_VERSION=1.99.1
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,10 +23,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates python3 libglib2.0-dev gcc-multilib \
     && rm -rf /var/lib/apt/lists/*
 
-# Rust toolchain (minimal profile). The i686 build additionally needs
+# Rust toolchain, pinned by version (an unpinned `stable` moves and changes the
+# output bytes). The i686 build additionally needs
 # `rustup target add i686-unknown-linux-musl` — see ../README.md.
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-    | sh -s -- -y --profile minimal \
+    | sh -s -- -y --profile minimal --default-toolchain "${RUST_VERSION}" \
     && /root/.cargo/bin/rustc --version \
     && /root/.cargo/bin/cargo --version
 
