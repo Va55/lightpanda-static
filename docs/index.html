@@ -52,15 +52,17 @@
   <p>These are the GitHub Releases — statically linked musl, ELF, arch-per-binary:</p>
   <table>
     <tr><th>Asset</th><th>Arch</th><th>Size</th></tr>
-    <tr><td><a href="https://github.com/Va55/lightpanda-static/releases/download/v1.1.0-dev/lightpanda-1.1.0-dev-x86_64-musl">lightpanda-1.1.0-dev-x86_64-musl</a></td><td>x86_64</td><td>~199 MiB</td></tr>
-    <tr><td><a href="https://github.com/Va55/lightpanda-static/releases/download/v1.1.0-dev/lightpanda-1.1.0-dev-i686-musl">lightpanda-1.1.0-dev-i686-musl</a></td><td>i386 (32-bit)</td><td>~169 MiB</td></tr>
+    <tr><td><a href="https://github.com/Va55/lightpanda-static/releases/download/v1.0.1-r1/lightpanda-1.0.1-r1-x86_64-musl">lightpanda-1.0.1-r1-x86_64-musl</a></td><td>x86_64</td><td>~199 MiB</td></tr>
+    <tr><td><a href="https://github.com/Va55/lightpanda-static/releases/download/v1.0.1-r1/lightpanda-1.0.1-r1-i686-musl">lightpanda-1.0.1-r1-i686-musl</a></td><td>i386 (32-bit)</td><td>~170 MiB</td></tr>
   </table>
+  <p><small>Built from upstream Lightpanda tag <code>1.0.1</code>. Releases are named <code>&lt;upstream tag&gt;-r&lt;build&gt;</code>, not after the version string: <code>lightpanda version</code> prints <code>1.1.0-dev</code>, which is upstream's next-development string and is identical across upstream tags 1.0.1, 1.0.2 and 1.0.3. Pins: <a href="https://github.com/Va55/lightpanda-static/blob/main/VERSIONS.md">VERSIONS.md</a>.</small></p>
   <p><small>Note: the 32-bit asset file is named <code>i686</code> (its real ISA floor — V8 needs CMOV/MMX); "i386" is the human-facing label for 32-bit x86, as Debian uses it.</small></p>
 
   <h2>Install &amp; verify</h2>
 <pre><code>sudo install -m 0755 lightpanda-*-musl /usr/local/bin/lightpanda
-lightpanda version                  # Lightpanda 1.1.0-dev
-ldd /usr/local/bin/lightpanda       # "not a dynamic executable" (static)
+lightpanda version                  # 1.1.0-dev (upstream next-dev string, not the tag)
+file /usr/local/bin/lightpanda      # "... statically linked ..."
+readelf -d /usr/local/bin/lightpanda | grep -c NEEDED   # 0
 lightpanda fetch --dump semantic_tree_text https://example.com
 </code></pre>
 

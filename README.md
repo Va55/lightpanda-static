@@ -15,12 +15,23 @@ Chromium should that ever be needed.
 The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship as
 **GitHub Releases** — statically-linked musl, archived per architecture:
 
-| Asset | Arch | Size |
-|-------|------|------|
-| `lightpanda-1.1.0-dev-x86_64-musl` | x86_64 | ~208 MB |
-| `lightpanda-1.1.0-dev-i686-musl`   | i386 (32-bit x86) | ~177 MB |
+| Asset | Arch | Size | Built from |
+|-------|------|------|------------|
+| `lightpanda-1.0.1-r1-x86_64-musl` | x86_64 | ~199 MiB | upstream `1.0.1` |
+| `lightpanda-1.0.1-r1-i686-musl`   | i386 (32-bit x86) | ~170 MiB | upstream `1.0.1` |
 
-> **Naming note:** the 32-bit asset file is named `i686` (its real ISA floor — V8 requires
+Releases are named `<upstream tag>-r<build revision>`. They are deliberately **not** named
+after the version string the binary prints — see below.
+
+> **Version-string note:** `lightpanda version` prints **`1.1.0-dev`**, which is *not* the
+> release these binaries were built from. Upstream's `build.zig.zon` declares the *next*
+> development version, and tags `1.0.1`, `1.0.2` and `1.0.3` **all** ship
+> `.version = "1.1.0-dev"`. Naming assets after that string would give three different
+> browsers the same name, so releases are named after the upstream **tag** instead. The
+> exact commit is pinned in [VERSIONS.md](VERSIONS.md): `lightpanda-io/browser` tag
+> `1.0.1` = `99edca45844b5968c3ec8e50ad8e1acec8f3b759`.
+
+> **Arch note:** the 32-bit asset file is named `i686` (its real ISA floor — V8 requires
 > CMOV/MMX, i.e. Pentium Pro). "i386" is the human-facing label: that is how Debian and the
 > ecosystem name 32-bit x86, and it's what the port is for. A true 80386/486 (no CMOV) cannot
 > run it — same situation as Debian's `i386` arch, which also requires i686 in practice.
@@ -34,10 +45,18 @@ sudo install -m 0755 <downloaded binary> /usr/local/bin/lightpanda
 ## Verify
 
 ```sh
-lightpanda version                                    # -> Lightpanda 1.1.0-dev
-ldd /usr/local/bin/lightpanda                          # "not a dynamic executable" (static)
+lightpanda version        # -> 1.1.0-dev   (upstream next-dev string, see note above)
+file /usr/local/bin/lightpanda                          # "... statically linked ..."
+readelf -d /usr/local/bin/lightpanda | grep -c NEEDED  # -> 0
+sha256sum -c SHA256SUMS   # integrity; SHA256SUMS ships with the release
 lightpanda fetch --dump semantic_tree_text https://example.com
 ```
+
+`lightpanda version` never initializes V8 (it returns in ~0.00 s at 2.5 MB RSS), so it only
+proves the file executes — the `fetch` above is the real smoke test (~32 MB RSS).
+`ldd` is avoided on purpose: on Alpine it prints
+`/lib/ld-musl-x86_64.so.1: …: Not a valid dynamic program` rather than the glibc
+"not a dynamic executable" wording.
 
 ## Build from source
 

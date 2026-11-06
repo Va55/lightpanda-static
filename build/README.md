@@ -3,6 +3,22 @@
 Produces fully static, pure-musl Lightpanda binaries for **x86_64** and **i386 (32-bit x86 / i686)**.
 Verified to build and run with zero glibc on both 64-bit and 32-bit musl (Alpine) hosts.
 
+## Pinned inputs
+
+The released binaries were built from upstream tag **`1.0.1`**
+(`99edca45844b5968c3ec8e50ad8e1acec8f3b759`). Check it out before building, so the V8 /
+Rust / dependency revisions match:
+
+```sh
+git clone https://github.com/lightpanda-io/browser
+git checkout 99edca45844b5968c3ec8e50ad8e1acec8f3b759   # tag 1.0.1
+```
+
+All dependency pins (zig-v8-fork, curl, sqlite, pcre2, …) are recorded in
+[../VERSIONS.md](../VERSIONS.md). Note that `lightpanda version` prints `1.1.0-dev` for
+tag `1.0.1` — that is upstream's next-development string, not the release; name builds
+`<upstream tag>-r<n>` instead.
+
 ## The critical discovery
 
 With Lightpanda's Zig build, `-Dtarget=*-linux-musl` reaches **only the final Zig exe
@@ -119,8 +135,9 @@ zig build -Dtarget=x86-linux-musl -Doptimize=ReleaseFast \
 
 ```sh
 sudo install -m 0755 lightpanda /usr/local/bin/lightpanda
-ldd /usr/local/bin/lightpanda        # "not a dynamic executable" (statically linked)
-lightpanda version                    # -> Lightpanda 1.1.0-dev
+file lightpanda                        # "... statically linked ..."
+readelf -d lightpanda | grep -c NEEDED # 0
+lightpanda version                     # -> 1.1.0-dev (upstream next-dev string, see above)
 lightpanda fetch --dump markdown https://example.com
 lightpanda fetch --dump semantic_tree_text https://example.com   # accessibility tree
 ```
