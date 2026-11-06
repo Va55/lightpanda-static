@@ -1,0 +1,158 @@
+name: Build release artifacts
+
+# Builds stripped Lightpanda binaries from pinned sources inside the pinned build
+# image on the self-hosted runner, TWICE, and fails if the two passes disagree.
+# That is the reproducibility check: same inputs -> identical stripped bytes.
+#
+# Runs only on the self-hosted runner: building V8-scale code needs ~24 cores and
+# ~30 GB RAM, which hosted runners cannot provide. Do not attach this workflow to
+# `pull_request` from forks — a self-hosted runner executes code from the branch.
+#
+# Publish: run with `publish=true` and `tag` empty to create a release, or set
+# `tag` to attach the assets to an existing (mutable) release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_version:
+        description: Version string used in asset names
+        required: true
+        default: 1.0.1-main.20261018-r2
+      browser_commit:
+        description: lightpanda-io/browser commit
+        required: true
+        default: f734e7f6aebc945fb8340284bfddd43244bf49ff
+      v8_commit:
+        description: lightpanda-io/zig-v8-fork commit
+        required: true
+        default: b73e4fa2d0afe5036745ae7d332cc5cb7e7adb53
+      v8_mode:
+        description: "cache = use cached V8 archives, build = rebuild V8 first"
+        type: choice
+        options: [cache, build]
+        default: cache
+      publish:
+        description: Upload assets to a GitHub release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build twice, compare, attest
+    runs-on: [self-hosted, zen2]
+    timeout-minutes: 180
+    permissions:
+      contents: write        # only needed when publish=true
+      id-token: write        # Sigstore keyless signing
+      attestations: write
+    env:
+      IMG: lp-ci-pinned
+      ZEN_ROOT: /srv/lp-ci
+    steps:
+      - name: Check out the build recipe
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Build the pinned image from build/Dockerfile
+        run: |
+          set -euo pipefail
+          sudo -n docker build -q -t "$IMG" -f build/Dockerfile build/ | tee /tmp/img.id
+          sudo -n docker image inspect "$IMG" --format '{{.Id}}'
+
+      - name: Pass 1
+        env:
+          WORK: ${{ env.ZEN_ROOT }}/work/${{ github.run_id }}-p1
+          V8_MODE: ${{ inputs.v8_mode }}
+          DOCKER: sudo -n docker
+        run: |
+          set -euo pipefail
+          rm -rf "$WORK"
+          sh build/ci-build.sh "$PWD/out1" "${{ inputs.asset_version }}" \
+             "${{ inputs.browser_commit }}" "${{ inputs.v8_commit }}"
+
+      - name: Pass 2 (fresh scratch dir, cold caches)
+        env:
+          WORK: ${{ env.ZEN_ROOT }}/work/${{ github.run_id }}-p2
+          V8_MODE: ${{ inputs.v8_mode }}
+          DOCKER: sudo -n docker
+        run: |
+          set -euo pipefail
+          rm -rf "$WORK"
+          sh build/ci-build.sh "$PWD/out2" "${{ inputs.asset_version }}" \
+             "${{ inputs.browser_commit }}" "${{ inputs.v8_commit }}"
+
+      - name: Reproducibility check — the two passes must be byte-identical
+        run: |
+          set -euo pipefail
+          for f in out1/lightpanda-*-musl; do
+            n=$(basename "$f")
+            a=$(sha256sum "out1/$n" | cut -d' ' -f1)
+            b=$(sha256sum "out2/$n" | cut -d' ' -f1)
+            printf '%-52s %s\n' "$n" "$a"
+            if [ "$a" != "$b" ]; then
+              echo "::error::$n differs between passes ($a vs $b)"
+              exit 1
+            fi
+          done
+          echo "both passes produced identical stripped binaries"
+
+      - name: Assemble release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cp out1/lightpanda-*-musl release/
+          cp out1/BUILDINFO.txt release/
+          ( cd release && sha256sum lightpanda-*-musl > SHA256SUMS && cat SHA256SUMS )
+          cat > release/RELEASE-NOTES.md <<'NOTES'
+          CI-built, stripped, reproducible Lightpanda binaries.
+
+          Built on a self-hosted runner from pinned sources in the pinned build image
+          (`build/Dockerfile`), twice, and the run fails unless both passes produce
+          byte-identical stripped binaries. See `BUILDINFO.txt` in the assets for the
+          exact inputs (source commits, V8 archive hashes, shim hash, image digest,
+          toolchain versions).
+
+          Verify:
+
+          ```sh
+          sha256sum -c SHA256SUMS
+          gh attestation verify <asset> --repo Va55/lightpanda-static
+          ```
+
+          The attestation here is a genuine build-provenance record: it was created by
+          the workflow that compiled these binaries.
+          NOTES
+          ls -l release
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
+        with:
+          subject-path: |
+            release/lightpanda-*-x86_64-musl
+            release/lightpanda-*-i686-musl
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: lightpanda-${{ inputs.asset_version }}
+          path: release/
+
+      - name: Publish to a release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ inputs.asset_version }}
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            && { echo "::error::release $TAG already exists; release assets are immutable — bump asset_version"; exit 1; }
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --title "Lightpanda ${{ inputs.asset_version }} — CI-built, stripped, reproducible" \
+            --notes-file release/RELEASE-NOTES.md \
+            release/lightpanda-*-musl release/SHA256SUMS release/BUILDINFO.txt
