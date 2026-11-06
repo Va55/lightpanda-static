@@ -81,14 +81,16 @@ if [ ! -f "$ARCH_DIR/libc_v8_musl.a" ] || [ ! -f "$ARCH_DIR/libc_v8_musl_ia32.a"
             for tgt in x86_64 x86; do
                 zig build -Dtarget=${tgt}-linux-musl -Doptimize=ReleaseFast prepare-v8
                 zig build -Dtarget=${tgt}-linux-musl -Doptimize=ReleaseFast build-v8
-                # The out/ layout is not stable across zig-v8-fork revisions (it used to be
-                # out/linux/release_<hash>/obj/zig/), so locate the archive instead of
-                # guessing the path. Newest wins: we just built this target.
-                a=$(find out -type f -name libc_v8.a -printf "%T@ %p\n" 2>/dev/null \
+                # The archive location is not stable across zig-v8-fork revisions: it used
+                # to be <repo>/out/linux/release_<hash>/obj/zig/, and now the whole V8 build
+                # tree lives under <repo>/.lp-cache/v8-<ver>/out/.../. Search the tree
+                # (skipping .git) instead of guessing. Newest wins: we just built this target.
+                a=$(find . -path ./.git -prune -o -type f -name libc_v8.a -printf "%T@ %p\n" 2>/dev/null \
                     | sort -n | tail -1 | cut -d" " -f2-)
                 if [ -z "$a" ]; then
-                    echo "no libc_v8.a produced for ${tgt}; out/ contains:"
-                    find out -maxdepth 4 -name "*.a" 2>/dev/null | head -20
+                    echo "no libc_v8.a produced for ${tgt}; candidates found:"
+                    find . -path ./.git -prune -o -type f -name "*.a" -print 2>/dev/null \
+                        | grep -E "obj/zig|libc_v8" | head -20
                     exit 1
                 fi
                 echo "${tgt}: archive at $a ($(stat -c%s "$a") bytes)"
