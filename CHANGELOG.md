@@ -164,3 +164,24 @@ Validated on the rebased tree against upstream's own gates:
 
 Still outstanding for an i686 build off current `main`: the V8 ia32 archive has to be rebuilt
 for the new `zig-v8-fork` pin; the published `r2` binaries remain built from `f734e7f`.
+
+## 1.0.3-main.20261106-r1 — built from current upstream main
+
+First release built from `main`@`8678e04` (tag `1.0.3` + 209 commits) rather than `f734e7f`, so
+the binaries are finally aligned with the patch set that passes upstream's gates.
+
+- x86_64 `be6ae67a…` (77,566,888 B) · i686 `1f0069d2…` (73,845,044 B), both passes identical
+- Both V8 musl archives rebuilt for the pin `main` uses (`zig-v8-fork` `0c73cd17`, V8
+  `15.5.35.13`); their hashes are in the release's `BUILDINFO.txt`
+- `patches/0002` gained one fix the rebase turned up: upstream added webaudio, whose
+  `OfflineAudioContext` used the u64 frame counter as a `usize` slice index
+  (`@memcpy(out[start..][0..n], …)`) — a 32-bit-only compile error
+- Gate evidence on the same base: `make test` 2295/2295, `zig fmt --check` clean
+
+Two CI-path bugs were fixed along the way, both mine, both in `v8_mode=build`: the V8 archive
+is no longer at `<repo>/out/...` but under `<repo>/.lp-cache/v8-<ver>/out/...`, so the script
+searches the tree instead of guessing, and it now verifies the shim actually landed in the
+archive (`zig ar t`) instead of assuming it.
+
+Outstanding: the `r3` i686 binary has not been run on 32-bit hardware (that machine was
+offline); `r2`'s was.

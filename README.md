@@ -34,12 +34,12 @@ The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship 
 
 | Asset | Arch | Size | Built by |
 |-------|------|------|----------|
-| `lightpanda-1.0.1-main.20261018-r2-x86_64-musl` | x86_64 | ~72 MiB | CI (`build-release.yml`) |
-| `lightpanda-1.0.1-main.20261018-r2-i686-musl`   | i386 (32-bit x86) | ~69 MiB | CI (`build-release.yml`) |
+| `lightpanda-1.0.3-main.20261106-r1-x86_64-musl` | x86_64 | ~74 MiB | CI (`build-release.yml`) |
+| `lightpanda-1.0.3-main.20261106-r1-i686-musl`   | i386 (32-bit x86) | ~70 MiB | CI (`build-release.yml`) |
 
-The `r2` assets are **stripped** — same code as `r1`, minus debug info, which is why they are
-about a third of the size. `v1.0.1-main.20261018-r1` is kept for lineage, but it was built
-before CI existed, in a container image that was not preserved, so it is not reproducible.
+Built from upstream `main` @ `8678e04` (2026-11-06) — tag `1.0.3` plus 209 commits — with the
+`zig-v8-fork` / V8 revision that `main` pins. Assets are **stripped**; earlier releases are kept
+for lineage but `v1.0.1-main.20261018-r1` predates CI and is not reproducible.
 
 Builds run on a self-hosted runner (24 cores/30 GB — V8 needs that), from the pinned sources
 in [VERSIONS.md](VERSIONS.md), **twice per release**; the workflow fails unless both passes

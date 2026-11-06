@@ -6,7 +6,7 @@ below fails, treat the download as untrusted and open an issue.
 ## 1. Integrity and provenance (recommended)
 
 ```sh
-tag=v1.0.1-main.20261018-r2
+tag=v1.0.3-main.20261106-r1
 asset=lightpanda-${tag#v}-x86_64-musl
 
 gh release download "$tag" --repo Va55/lightpanda-static   # both binaries + SHA256SUMS + BUILDINFO.txt

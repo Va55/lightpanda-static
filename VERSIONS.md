@@ -60,8 +60,10 @@ which is why releases here are named after the release line, not the string.
 
 | Asset | Arch | SHA-256 |
 |---|---|---|
-| `lightpanda-1.0.1-main.20261018-r2-x86_64-musl` | x86_64 | `605f2e2a2f748438dd9889634280479c7076410a635235db1400e55471d78b5a` |
-| `lightpanda-1.0.1-main.20261018-r2-i686-musl` | i386 (32-bit x86) | `84eb5f92ce6fe8e61bd1bd030267790fae878a8a5356c3f86c2bc91d2f02e16c` |
+| `lightpanda-1.0.3-main.20261106-r1-x86_64-musl` | x86_64 | `be6ae67a86d689cd634af3d2d8c0fe0b6537559f928c865bde8aae193b0308cd` |
+| `lightpanda-1.0.3-main.20261106-r1-i686-musl` | i386 (32-bit x86) | `1f0069d2a8cc238c941cbdcc6c842b4384f558040799e9840a2079592fd61590` |
+| `lightpanda-1.0.1-main.20261018-r2-x86_64-musl` (superseded) | x86_64 | `605f2e2a2f748438dd9889634280479c7076410a635235db1400e55471d78b5a` |
+| `lightpanda-1.0.1-main.20261018-r2-i686-musl` (superseded) | i386 (32-bit x86) | `84eb5f92ce6fe8e61bd1bd030267790fae878a8a5356c3f86c2bc91d2f02e16c` |
 | `lightpanda-1.0.1-main.20261018-r1-x86_64-musl` (historical) | x86_64 | `bbf780f79fc1102dd9a1efdbf2847e92f0fecd3dd74416ffc0eed83626a05f16` |
 | `lightpanda-1.0.1-main.20261018-r1-i686-musl` (historical) | i386 (32-bit x86) | `def6f4ff9e22f67865267f2a00800f2361badc2bc65e65f5dd95b2e767296e74` |
 
@@ -85,6 +87,29 @@ So the real floor is **SSE2-class: Pentium 4 / Athlon 64 / Core Duo and newer**,
 (Yonah); 80386/486/Pentium/Pentium II/III are out.
 
 ## Reproducibility status
+
+### Current release `1.0.3-main.20261106-r1` — CI-built, reproducible (2026-11-06)
+
+Built from upstream `main` @ `8678e04` (tag `1.0.3` + 209 commits) with the `zig-v8-fork` /
+V8 revision that `main` pins (`0c73cd17`, V8 `15.5.35.13`, prebuilt `v0.6.2`). Both V8 musl
+archives were rebuilt for that pin and their hashes are recorded in the release's
+`BUILDINFO.txt`:
+
+| Archive | SHA-256 |
+|---|---|
+| `libc_v8_musl.a` (x86_64) | `e71ca83c84397be0e4ef46b9de39670da7c628f280c61fab2b9c3c81c01522ab` |
+| `libc_v8_musl_ia32.a` (i686) | `ceab723be6d454416286645e0b8f6f9d8726cac32263c695186d94a97310b11b` |
+
+Two independent CI passes produced byte-identical stripped binaries:
+
+| Asset | SHA-256 | Size |
+|---|---|---|
+| `lightpanda-1.0.3-main.20261106-r1-x86_64-musl` | `be6ae67a86d689cd634af3d2d8c0fe0b6537559f928c865bde8aae193b0308cd` | 77,566,888 B |
+| `lightpanda-1.0.3-main.20261106-r1-i686-musl` | `1f0069d2a8cc238c941cbdcc6c842b4384f558040799e9840a2079592fd61590` | 73,845,044 B |
+
+Not yet done for `r3`: the i686 binary has not been executed on 32-bit hardware (the test
+machine was offline at release time). The `r2` i686 asset was validated on a Core Duo L2500.
+
 
 ### Current release `r2` — CI-built and reproducible (2026-11-06)
 
