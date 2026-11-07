@@ -110,9 +110,9 @@ Two independent CI passes produced byte-identical stripped binaries:
 `r3` hardware validation: the `i686` asset was run on the ThinkPad X60s (Core Duo L2500,
 i686 Alpine) — `example.com` 0.72–1.00 s, Wikipedia 1.34–1.61 s, peak RSS 33–42 MB, JS/JIT
 verified via `lightpanda run`, and the tested file's SHA-256 matches the release. The
-`x86_64` asset was run on Debian 13/glibc (`not a dynamic executable`, fetches fine), which
-also exercises the "static binary, any distro" claim. Low-end `x86_64` timings are still from
-`r2` on the Core 2 Duo E6550, since that machine was offline for this release.
+`x86_64` asset was run on the Core 2 Duo E6550 (`example.com` 0.53–0.54 s, Wikipedia
+1.01–1.02 s, 37–52 MB RSS) and on Debian 13/glibc (`not a dynamic executable`, fetches fine),
+which also exercises the "static binary, any distro" claim.
 
 
 ### Current release `r2` — CI-built and reproducible (2026-11-06)

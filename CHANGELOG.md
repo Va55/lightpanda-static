@@ -183,7 +183,10 @@ is no longer at `<repo>/out/...` but under `<repo>/.lp-cache/v8-<ver>/out/...`, 
 searches the tree instead of guessing, and it now verifies the shim actually landed in the
 archive (`zig ar t`) instead of assuming it.
 
-Hardware validation: the `r3` i686 asset was run on the ThinkPad X60s (Core Duo L2500) —
-hash matches the release, `example.com` 0.72–1.00 s, Wikipedia 1.34–1.61 s, 33–42 MB RSS, and
-`lightpanda run` confirms the V8 ia32 JIT. The x86_64 asset was run on Debian 13/glibc and
-reports `not a dynamic executable`, confirming the static-linking claim across distros.
+Hardware validation, both assets, hashes matching the release:
+- `i686` on the ThinkPad X60s (Core Duo L2500): `example.com` 0.72–1.00 s, Wikipedia
+  1.34–1.61 s, 33–42 MB RSS; `lightpanda run` confirms the V8 ia32 JIT.
+- `x86_64` on the Core 2 Duo E6550: `example.com` 0.53–0.54 s, Wikipedia 1.01–1.02 s,
+  37–52 MB RSS — faster than `r2` on the same box (0.63 s / 1.24 s).
+- `x86_64` on Debian 13/glibc: `not a dynamic executable`, fetches fine, so the
+  "static binary, any distro" claim is exercised rather than asserted.
