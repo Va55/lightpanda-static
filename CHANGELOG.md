@@ -15,12 +15,16 @@ Changes in this commit (docs only, no build/source change):
   the archived proof.
 - VERSIONS.md is explicitly labeled as the frozen provenance record for `r3`.
 
-Why freeze, in one line: the value here was the proof, and it was made with receipts. Keeping
-the 32-bit build alive would mean chasing upstream `main` (it broke the port once already) and
-re-building V8 on every rebase — against a horizon where upstream V8 will eventually stop
-shipping ia32 entirely. For a demonstration, that maintenance cost is hard to justify — and
-it buys a capability we have already proven. The fork, patch set, and recipe stay archived and
-runnable; they just won't be tracked forward.
+Why freeze: the value here was the proof, and it was made with receipts. Two horizons close
+in on the same conclusion. On the **engine** side, upstream V8's 32-bit support will
+eventually go away — and chasing upstream `main` already broke the port once (the webaudio
+fix in `r3`). On the **networking/trust** side, the post-quantum TLS migration (hybrid
+X25519MLKEM768 is already rolling out at the CDN layer) means a frozen binary's embedded
+crypto stack can't keep up with PQ key exchange — non-PQ clients get pushed to a legacy
+fallback that itself keeps being deprecated. For a demonstration, following either horizon
+into the future is maintenance we don't need to do, and both buy a capability we have already
+proven. The fork, patch set, and recipe stay archived and runnable; they just won't be
+tracked forward.
 
 ## v1.0.1-main.20261018-r1 — release naming fix
 
