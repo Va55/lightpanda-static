@@ -1,5 +1,27 @@
 # Changelog
 
+## Status — project frozen after `r3` (2026-11-07)
+
+**`r3` (`v1.0.3-main.20261106-r1`) is the final release.** This project was a capability
+demonstration: proving a usable browser with a real JS engine can still be hand-built for
+**32-bit x86** in 2026, when every mainstream engine has dropped it. That goal was reached,
+measured, and archived, so the project is now frozen rather than maintained.
+
+Changes in this commit (docs only, no build/source change):
+
+- README gains a status banner: **frozen — a capability demonstration, not a maintained
+  target** — and marks `r3` as the final release. The "Tested on" hardware record, the
+  reproducible-build and attestation evidence, and the build recipe all remain in place as
+  the archived proof.
+- VERSIONS.md is explicitly labeled as the frozen provenance record for `r3`.
+
+Why freeze, in one line: the value here was the proof, and it was made with receipts. Keeping
+the 32-bit build alive would mean chasing upstream `main` (it broke the port once already) and
+re-building V8 on every rebase — against a horizon where upstream V8 will eventually stop
+shipping ia32 entirely. For a demonstration, that maintenance cost is hard to justify — and
+it buys a capability we have already proven. The fork, patch set, and recipe stay archived and
+runnable; they just won't be tracked forward.
+
 ## v1.0.1-main.20261018-r1 — release naming fix
 
 **No source or binary change.** The x86_64 and i686 assets are byte-identical to the

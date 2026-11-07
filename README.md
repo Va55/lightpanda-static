@@ -1,6 +1,16 @@
 # lightpanda-static
 
-**Fully static** Lightpanda builds — pure-musl, and archiving **i386 (32-bit x86)** as well as
+> **STATUS: frozen — a capability demonstration, not a maintained target.**
+>
+> This project exists to prove that a usable browser with a modern JS engine can still be
+> hand-built for **32-bit x86** in 2026, after every mainstream engine has dropped it. That
+> goal was reached and archived at **`r3`** (`v1.0.3-main.20261106-r1`, 2026-11-07). The
+> release, the reproducible-build record, and the hardware measurements below are frozen as
+> the permanent record of the proof. **No further releases are planned.** Upstream V8 (and
+> the 32-bit toolchain) will eventually outrun the ia32 build, so this is a snapshot on
+> purpose — a demonstration, not a supported long-term target.
+
+**Fully static** Lightpanda builds — pure-musl, archiving **i386 (32-bit x86)** as well as
 x86_64. "static" is the point: no glibc (and no libc-loader) needed at runtime, so they run on
 any Linux regardless of distro (Alpine/musl, Debian/Ubuntu/glibc, distroless, …). The build
 recipe that produces them is included.
@@ -28,6 +38,10 @@ Chromium should that ever be needed.
   differences (fortify `_chk` no-ops; V8 sandbox and pointer compression off on i386).
 
 ## Releases
+
+> **`r3` is the final release.** The project is frozen after it (see the status banner above);
+> the release and its attestation remain immutable and downloadable, but no new builds or
+> versions will be cut.
 
 The binaries are too large to commit (GitHub's 100 MB/file limit), so they ship as
 **GitHub Releases** — statically-linked musl, archived per architecture:

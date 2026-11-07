@@ -3,6 +3,11 @@
 What the released binaries were actually built from. The recipe is in
 [build/README.md](build/README.md).
 
+> **Frozen record.** This is the permanent provenance of the final release `r3`
+> (`v1.0.3-main.20261106-r1`, 2026-11-07). The project is frozen — a capability
+> demonstration, not a maintained target (see README status) — so this document stands as the
+> archived proof and will not be updated for new builds.
+
 ## Upstream
 
 | Field | Value |
