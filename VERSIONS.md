@@ -107,8 +107,12 @@ Two independent CI passes produced byte-identical stripped binaries:
 | `lightpanda-1.0.3-main.20261106-r1-x86_64-musl` | `be6ae67a86d689cd634af3d2d8c0fe0b6537559f928c865bde8aae193b0308cd` | 77,566,888 B |
 | `lightpanda-1.0.3-main.20261106-r1-i686-musl` | `1f0069d2a8cc238c941cbdcc6c842b4384f558040799e9840a2079592fd61590` | 73,845,044 B |
 
-Not yet done for `r3`: the i686 binary has not been executed on 32-bit hardware (the test
-machine was offline at release time). The `r2` i686 asset was validated on a Core Duo L2500.
+`r3` hardware validation: the `i686` asset was run on the ThinkPad X60s (Core Duo L2500,
+i686 Alpine) — `example.com` 0.72–1.00 s, Wikipedia 1.34–1.61 s, peak RSS 33–42 MB, JS/JIT
+verified via `lightpanda run`, and the tested file's SHA-256 matches the release. The
+`x86_64` asset was run on Debian 13/glibc (`not a dynamic executable`, fetches fine), which
+also exercises the "static binary, any distro" claim. Low-end `x86_64` timings are still from
+`r2` on the Core 2 Duo E6550, since that machine was offline for this release.
 
 
 ### Current release `r2` — CI-built and reproducible (2026-11-06)

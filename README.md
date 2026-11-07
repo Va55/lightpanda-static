@@ -92,13 +92,19 @@ file matches `SHA256SUMS` exactly.
 
 | Host | CPU | Asset | `example.com` | Wikipedia article | Peak RSS |
 |---|---|---|---|---|---|
-| Alpine 3.24, 8 GB | Core 2 Duo E6550 @ 2.33 GHz, 2 cores | `x86_64` | 0.63 s | 1.24 s | 32–49 MB |
-| Alpine 3.24, 3.2 GB | Core Duo L2500 @ 1.83 GHz, 2 cores | `i686` | 0.70 s | 1.27 s | 30–42 MB |
+| Alpine 3.24 (ThinkPad X60s), 3.2 GB | Core Duo L2500 @ 1.83 GHz, 2 cores | `1.0.3-main.20261106-r1` `i686` | 0.72–1.00 s | 1.34–1.61 s | 33 / 42 MB |
+| Debian 13 (glibc), 30 GB | — (24 cores) | `1.0.3-main.20261106-r1` `x86_64` | 0.34 s | 0.85 s | — |
+| Alpine 3.24, 8 GB | Core 2 Duo E6550 @ 2.33 GHz, 2 cores | `r2` `x86_64` | 0.63 s | 1.24 s | 32–49 MB |
 
-Both are 2-core, no-HT machines from 2006–2007, so this is roughly the worst case that
-still runs a modern JS engine. JS execution was verified on the 32-bit host via
-`lightpanda run` (arithmetic, `reduce`, string handling and IEEE-754 double formatting all
-correct), which exercises V8's JIT on ia32.
+The two Alpine rows are 2-core, no-HT machines from 2006–2007 — roughly the worst case that
+still runs a modern JS engine. The Debian row matters for a different reason: the same
+statically linked musl binary reports `not a dynamic executable` and runs unchanged on a
+glibc distro, which is the point of static linking.
+
+JS execution was verified on the 32-bit host via `lightpanda run` (arithmetic, `reduce`,
+string handling and IEEE-754 double formatting all correct), exercising V8's JIT on ia32.
+The `r3` `i686` numbers are 3 runs per URL; `r3` was marginally slower than `r2` on that box
+(`lwn.net` 1.15 s → 1.6 s), consistent with ~209 upstream commits of added features.
 
 ## Build from source
 

@@ -183,5 +183,7 @@ is no longer at `<repo>/out/...` but under `<repo>/.lp-cache/v8-<ver>/out/...`, 
 searches the tree instead of guessing, and it now verifies the shim actually landed in the
 archive (`zig ar t`) instead of assuming it.
 
-Outstanding: the `r3` i686 binary has not been run on 32-bit hardware (that machine was
-offline); `r2`'s was.
+Hardware validation: the `r3` i686 asset was run on the ThinkPad X60s (Core Duo L2500) —
+hash matches the release, `example.com` 0.72–1.00 s, Wikipedia 1.34–1.61 s, 33–42 MB RSS, and
+`lightpanda run` confirms the V8 ia32 JIT. The x86_64 asset was run on Debian 13/glibc and
+reports `not a dynamic executable`, confirming the static-linking claim across distros.
