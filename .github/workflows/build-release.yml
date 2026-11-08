@@ -1,5 +1,9 @@
 name: Build release artifacts
 
+# FROZEN: this project is frozen at r3 (v1.0.3-main.20261106-r1, 2026-11-07).
+# The build + two-pass reproducibility check still work and are useful for verifying the
+# recipe; the publish path is deliberately disabled below so a run cannot cut a new release.
+
 # Builds stripped Lightpanda binaries from pinned sources inside the pinned build
 # image on the self-hosted runner, TWICE, and fails if the two passes disagree.
 # That is the reproducibility check: same inputs -> identical stripped bytes.
@@ -176,6 +180,9 @@ jobs:
           TAG: v${{ inputs.asset_version }}
         run: |
           set -euo pipefail
+          echo "::error::This project is frozen at r3; publishing is disabled by design."
+          echo "To cut a release, first un-freeze the README and remove this guard in the same commit."
+          exit 1
           command -v gh >/dev/null || { echo "::error::the gh CLI must be installed on the runner"; exit 1; }
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
             && { echo "::error::release $TAG already exists; release assets are immutable — bump asset_version"; exit 1; }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>lightpanda-static — fully static (pure-musl) Lightpanda builds for x86_64 &amp; i386</title>
-  <meta name="description" content="Fully static, pure-musl Lightpanda browser builds (x86_64 & i386/32-bit) with zero glibc at runtime — run on any Linux (Alpine, Debian, distroless). Includes the full build recipe and a V8 32-bit (i386/i686) port.">
+  <meta name="description" content="Frozen at r3: fully static, pure-musl Lightpanda browser builds (x86_64 & i386/32-bit) with zero glibc at runtime, archived as a capability demonstration of a hand-built 32-bit V8, with the full build recipe.">
   <meta name="keywords" content="lightpanda, musl, static, static-linking, i386, i686, 32-bit, alpine, headless-browser, v8, zig, no-glibc, cross-compile">
   <meta name="author" content="Va55">
   <link rel="canonical" href="https://va55.github.io/lightpanda-static/">
@@ -40,16 +40,19 @@
     h1 { font-size: 1.5rem; } h2 { font-size: 1.15rem; margin-top: 2rem; }
     .badge { display:inline-block; padding:.15em .6em; border-radius:999px; font-size:.8em;
              border:1px solid currentColor; margin-right:.35em; }
+    .callout { border-left: 4px solid #d1242f; padding: .6rem .9rem; margin: 1rem 0;
+               background: rgba(209,36,47,.08); border-radius: 4px; }
     table { border-collapse: collapse; } td, th { border: 1px solid #8888; padding:.3rem .6rem; text-align:left; }
   </style>
 </head>
 <body>
   <h1>lightpanda-static</h1>
-  <p><span class="badge">fully static</span><span class="badge">pure-musl</span><span class="badge">x86_64</span><span class="badge">i386 / 32-bit</span></p>
+  <p><span class="badge">fully static</span><span class="badge">pure-musl</span><span class="badge">x86_64</span><span class="badge">i386 / 32-bit</span><span class="badge">frozen at r3</span></p>
+  <div class="callout"><strong>STATUS: frozen.</strong> This is a capability demonstration, not a maintained target. The 32-bit port was proven and archived at <code>r3</code> (<code>v1.0.3-main.20261106-r1</code>, 2026-11-07) — <strong>no further releases are planned</strong>, and no security updates will be issued. Read the reasoning in the <a href="https://github.com/Va55/lightpanda-static#readme">README status banner</a>.</div>
   <p><strong>Fully static Lightpanda builds</strong> for <strong>x86_64</strong> and the <strong>i386 (32-bit x86 / i686)</strong> port — zero glibc, no libc-loader needed at runtime. They run on <em>any</em> Linux regardless of distro: Alpine/musl, Debian/Ubuntu/glibc, distroless. A usable browser hand-built for the 32-bit world, plus the full build recipe.</p>
 
   <h2>Download the binaries</h2>
-  <p>These are the GitHub Releases — statically linked musl, ELF, arch-per-binary:</p>
+  <p><strong><code>r3</code> is the final release.</strong> These are the GitHub Releases — statically linked musl, ELF, arch-per-binary. They remain downloadable and their attestations verifiable; nothing new will be built:</p>
   <table>
     <tr><th>Asset</th><th>Arch</th><th>Size</th></tr>
     <tr><td><a href="https://github.com/Va55/lightpanda-static/releases/download/v1.0.3-main.20261106-r1/lightpanda-1.0.3-main.20261106-r1-x86_64-musl">lightpanda-1.0.3-main.20261106-r1-x86_64-musl</a></td><td>x86_64</td><td>~74 MiB</td></tr>

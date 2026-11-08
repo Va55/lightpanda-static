@@ -15,16 +15,16 @@ Changes in this commit (docs only, no build/source change):
   the archived proof.
 - VERSIONS.md is explicitly labeled as the frozen provenance record for `r3`.
 
-Why freeze: the value here was the proof, and it was made with receipts. Two horizons close
-in on the same conclusion. On the **engine** side, upstream V8's 32-bit support will
-eventually go away — and chasing upstream `main` already broke the port once (the webaudio
-fix in `r3`). On the **networking/trust** side, the post-quantum TLS migration (hybrid
-X25519MLKEM768 is already rolling out at the CDN layer) means a frozen binary's embedded
-crypto stack can't keep up with PQ key exchange — non-PQ clients get pushed to a legacy
-fallback that itself keeps being deprecated. For a demonstration, following either horizon
-into the future is maintenance we don't need to do, and both buy a capability we have already
-proven. The fork, patch set, and recipe stay archived and runnable; they just won't be
-tracked forward.
+Why freeze: the value here was the proof, and it was made with receipts. The **engine**
+horizon is the decisive one — upstream V8's 32-bit support will eventually go away, and
+chasing upstream `main` already broke the port once (the webaudio fix in `r3`). The
+**crypto** horizon is weaker than it first appeared, and an earlier draft of this entry
+overstated it: PQ *key exchange* is already in the frozen binary (`X25519MLKEM768` in its
+pinned BoringSSL, verified with `strings`; CA roots come from the system store), so a
+non-PQ-client legacy fallback is not the situation. What does drift is certificate
+algorithms and protocol versions over a multi-year horizon. For a demonstration, following
+either horizon forward is maintenance we don't need. The fork, patch set, and recipe stay
+archived and runnable; they just won't be tracked forward.
 
 ## v1.0.1-main.20261018-r1 — release naming fix
 
@@ -216,3 +216,39 @@ Hardware validation, both assets, hashes matching the release:
   37–52 MB RSS — faster than `r2` on the same box (0.63 s / 1.24 s).
 - `x86_64` on Debian 13/glibc: `not a dynamic executable`, fetches fine, so the
   "static binary, any distro" claim is exercised rather than asserted.
+
+### Freeze-alignment audit (docs only)
+
+Audited every file for claims that contradict the frozen status, and fixed the eight that did:
+
+- `docs/index.html` — the landing page had **zero** freeze mentions while the README had five
+  (caught by the audit, not by review). Now carries a red status callout, a `frozen at r3`
+  badge, a "final release" note above the download table, and a meta description that says
+  frozen.
+- `README.md`, `CHANGELOG.md` — the post-quantum half of the freeze rationale was **wrong**:
+  the frozen binary already ships `X25519MLKEM768` (final IANA codepoint, plus the older
+  `X25519Kyber768`) in its pinned BoringSSL, and takes CA roots from the system store
+  (`/etc/ssl/certs`, `/etc/pki/tls/certs/…`), not from the binary. A frozen copy is therefore
+  not stranded on key exchange today. Both files now say the *engine* horizon is the decisive
+  one and describe the crypto horizon accurately (certificate algorithms and protocol versions
+  drift over years).
+- `SECURITY.md` — promised a reporting/scope process with no mention of being unmaintained. Now
+  opens with "frozen and unmaintained: no security updates will be issued, do not deploy against
+  untrusted content".
+- `VERIFY.md` — says why the commands pin `r3`, and separates *integrity* (still checkable)
+  from *security currency* (gone).
+- `patches/README.md`, `build/README.md` — marked archived / preserved, not maintained.
+- `.github/workflows/build-release.yml` — header marks it frozen, and the publish step now
+  `exit 1`s with an explanatory message, so a run cannot cut a release by accident. The build
+  and two-pass reproducibility check remain usable for verifying the recipe.
+- `.github/dependabot.yml` — removed: weekly action-update PRs make no sense on a frozen repo.
+- **`SHA256SUMS` at the repo root was stale**: it still described the `r1` assets
+  (`bbf780f7…`/`def6f4ff…`), so the committed checksums had not matched the current release
+  since `r2` — and `VERIFY.md` claims "bytes match the *committed* checksums" and that the
+  attestation workflow "only attests files that match the `SHA256SUMS` in the checked-out
+  commit". Both statements were therefore false for the last two releases. The file is now
+  **byte-identical to the copy shipped in the `r3` release** (`1f0069d2…` i686, `be6ae67a…`
+  x86_64) and verified against the real binary. Historical hashes remain in VERSIONS.md.
+
+Note: the `r3` release is immutable, so its **release notes cannot be amended** to carry the
+freeze notice. The notice lives in the README, the landing page, and this file by design.

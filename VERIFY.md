@@ -1,5 +1,10 @@
 # Verifying a download
 
+> **This project is frozen at `r3`** (`v1.0.3-main.20261106-r1`, 2026-11-07). These commands pin that
+> release deliberately: it is the final artifact, its attestation stays verifiable, and no
+> later release will replace it. Integrity checks still apply; *security* currency does not —
+> see [SECURITY.md](SECURITY.md).
+
 Everything here is checkable without trusting this repository's prose. If any step
 below fails, treat the download as untrusted and open an issue.
 

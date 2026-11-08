@@ -6,10 +6,13 @@
 > hand-built for **32-bit x86** in 2026, after every mainstream engine has dropped it. That
 > goal was reached and archived at **`r3`** (`v1.0.3-main.20261106-r1`, 2026-11-07). The
 > release, the reproducible-build record, and the hardware measurements below are frozen as
-> the permanent record of the proof. **No further releases are planned.** The door closes
-> from two sides: upstream V8's ia32 sunset (the engine), and the post-quantum TLS migration
-> a frozen crypto stack can't ride (the networking/trust). Both point one way — this is a
-> snapshot, not a maintained line.
+> the permanent record of the proof. **No further releases are planned.** The strong horizon
+> is the **engine**: upstream V8's ia32 support will eventually go away, and chasing `main`
+> already broke the port once (the webaudio fix in `r3`). The weaker one is **crypto**: PQ key
+> exchange is *already in this build* (`X25519MLKEM768` ships in the pinned BoringSSL, and CA
+> roots come from the system store, not the binary), so nothing is stranded today — but
+> certificate algorithms and protocol versions will pass a frozen crypto stack eventually.
+> Either way: a snapshot, not a maintained line.
 
 **Fully static** Lightpanda builds — pure-musl, archiving **i386 (32-bit x86)** as well as
 x86_64. "static" is the point: no glibc (and no libc-loader) needed at runtime, so they run on

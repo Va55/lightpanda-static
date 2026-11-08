@@ -1,5 +1,20 @@
 # Security policy
 
+## Project status: frozen and unmaintained
+
+This project is **frozen at `r3`** (`v1.0.3-main.20261106-r1`, 2026-11-07). It is a
+capability demonstration, not a supported product:
+
+- **No security updates will be issued.** There is no patch stream; a vulnerability found
+  in these binaries will not be fixed here.
+- **Do not deploy these binaries against untrusted content.** They are browsers with a JIT
+  and a TLS stack, and they ship with the hardening differences listed below.
+- Upstream fixes for Lightpanda/V8 do not migrate into the frozen artifact.
+
+Reports are still welcome, but treat the honest expectation as *disclosure and
+documentation*, not remediation.
+
+
 ## What this repository ships
 
 - Two statically linked Lightpanda binaries (GitHub Releases), derived from

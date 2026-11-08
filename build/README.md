@@ -1,5 +1,9 @@
 # Building native-musl Lightpanda (x86_64 and i386) — validated recipe
 
+> **Archived recipe.** This is the environment and command sequence that produced the frozen
+> `r3` binaries; it is preserved, not maintained. See the freeze note in
+> [../README.md](../README.md).
+
 Produces fully static, pure-musl Lightpanda binaries for **x86_64** and **i386 (32-bit x86 / i686)**.
 Verified to build and run with zero glibc on both 64-bit and 32-bit musl (Alpine) hosts.
 

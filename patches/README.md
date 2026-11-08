@@ -1,5 +1,9 @@
 # The i386 (i686) patch set
 
+> **Archived.** These patches are the source delta behind the frozen `r3` release and are
+> kept for reference (and for anyone upstreaming them). They are not tracked forward against
+> upstream `main` any more — see the freeze rationale in [../README.md](../README.md).
+
 The two patches that make Lightpanda build for 32-bit x86, extracted from the trees the
 released binaries were actually built from.
 
