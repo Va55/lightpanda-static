@@ -2,6 +2,9 @@
 
 > **STATUS: frozen — a capability demonstration, not a maintained target.**
 >
+> **Reference implementation for upstream discussion.** Not a fork, not a distribution, no
+> support. If upstream ships static builds, this repo is obsolete by design.
+>
 > This project exists to prove that a usable browser with a modern JS engine can still be
 > hand-built for **32-bit x86** in 2026, after every mainstream engine has dropped it. That
 > goal was reached and archived at **`r3`** (`v1.0.3-main.20261106-r1`, 2026-11-07). The

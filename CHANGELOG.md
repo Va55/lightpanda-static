@@ -252,3 +252,16 @@ Audited every file for claims that contradict the frozen status, and fixed the e
 
 Note: the `r3` release is immutable, so its **release notes cannot be amended** to carry the
 freeze notice. The notice lives in the README, the landing page, and this file by design.
+
+### Sunset clause (docs only)
+
+The status banner said *frozen* but never named the condition under which the work stops
+mattering, which is the one thing a reader deciding "is this a competitor?" actually needs.
+The README and landing page now say it in one line, right under the status:
+
+> **Reference implementation for upstream discussion.** Not a fork, not a distribution, no
+> support. If upstream ships static builds, this repo is obsolete by design.
+
+That is stronger than "archived" because it is falsifiable: the project has a stated end
+condition, and upstream meeting it retires this repo rather than competing with it. No behaviour,
+artifact, or release changes — the release line stays frozen and immutable.
